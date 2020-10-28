@@ -147,6 +147,24 @@ contract('VolumeTrendRecorder', function (accounts) {
     expectedRFactor = precisionUnits.mul(numerator).div(denominator);
     Helper.assertApproximate(rFactor, expectedRFactor, 'unexpected rFactor');
   });
+
+  it('test gas for long number of block without trade', async () => {
+    let recorder = await VolumeTrendRecorder.new(new BN(Helper.precisionUnits));
+    let recordInfo = await recorder.mockGetInfo();
+    let block0 = recordInfo._lastTradeBlock.toNumber();
+
+    let block = block0;
+    let result = await recorder.mockUpdateVolume(new BN(5000), block);
+    console.log(result.receipt.gasUsed);
+
+    block = block0 + 1;
+    result = await recorder.mockUpdateVolume(new BN(5000), block);
+    console.log(result.receipt.gasUsed);
+
+    block = block0 + 10000;
+    result = await recorder.mockUpdateVolume(new BN(5000), block);
+    console.log(result.receipt.gasUsed);
+  });
 });
 
 function getEMA (ema0, block0, data, alpha, block) {
