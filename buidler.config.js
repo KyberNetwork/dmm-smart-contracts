@@ -1,8 +1,8 @@
 usePlugin('@nomiclabs/buidler-truffle5');
 usePlugin('@nomiclabs/buidler-ethers');
 usePlugin('@nomiclabs/buidler-web3');
-usePlugin('buidler-contract-sizer');
 usePlugin("solidity-coverage");
+usePlugin('buidler-contract-sizer');
 
 require('dotenv').config();
 
@@ -16,7 +16,7 @@ task('accounts', 'Prints the list of accounts', async () => {
 
 module.exports = {
   solc: {
-    version: '0.6.12',
+    version: '0.6.6',
     optimizer: {
       enabled: true,
       runs: 999999,
