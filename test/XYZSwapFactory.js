@@ -4,20 +4,14 @@ const XYZSwapPair = artifacts.require('XYZSwapPair');
 
 const Helper = require('./helper');
 
-const {expectEvent, expectRevert, constants} = require('@openzeppelin/test-helpers');
+const {expectRevert, constants} = require('@openzeppelin/test-helpers');
 const {assert} = require('chai');
-const BN = web3.utils.BN;
-
-const MINIMUM_LIQUIDITY = new BN(1000);
 
 let tokenA;
 let tokenB;
 let factory;
-let pair;
 let feeToSetter;
 let feeTo;
-let liquidityProvider;
-let app;
 
 contract('XYZSwapFactory', function (accounts) {
   before('init', async () => {
