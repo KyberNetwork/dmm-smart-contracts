@@ -3,6 +3,7 @@ const BN = web3.utils.BN;
 
 const {precisionUnits, MINIMUM_LIQUIDITY} = require('./helper');
 const {expectEvent, expectRevert, constants} = require('@openzeppelin/test-helpers');
+const {ecsign} = require('ethereumjs-util');
 
 const XYZSwapRouter = artifacts.require('XYZSwapRouter01');
 const XYZSwapFactory = artifacts.require('XYZSwapFactory');
@@ -25,6 +26,8 @@ let ethPair;
 let router;
 let pair;
 let initTokenAmount = Helper.expandTo18Decimals(1000);
+const MaxUint256 = new BN(2).pow(new BN(256)).sub(new BN(1));
+const PERMIT_TYPEHASH = '0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9';
 
 contract('XYZSwapRouter', function (accounts) {
   beforeEach('setup', async () => {
@@ -337,6 +340,62 @@ contract('XYZSwapRouter', function (accounts) {
     Helper.assertEqual(await ethPair.balanceOf(trader), new BN(0));
     Helper.assertEqual(await ethPartner.balanceOf(trader), initTokenAmount.sub(new BN(500)));
     Helper.assertEqual(await Helper.getBalancePromise(trader), initEthAmount.add(ethAmount).sub(new BN(2000)));
+  });
+
+  it('removeLiquidityWithPermit', async () => {
+    const {waffle} = require('@nomiclabs/buidler');
+    const [wallet] = waffle.provider.getWallets();
+    const trader = wallet.address;
+
+    const token0Amount = Helper.expandTo18Decimals(1);
+    const token1Amount = Helper.expandTo18Decimals(4);
+    await token0.transfer(pair.address, token0Amount, {from: trader});
+    await token1.transfer(pair.address, token1Amount, {from: trader});
+    await pair.mint(trader);
+    const expectedLiquidity = Helper.expandTo18Decimals(2);
+
+    const nonce = await pair.nonces(trader);
+    const digest = await getApprovalDigest(
+      pair,
+      trader,
+      router.address,
+      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+      nonce,
+      MaxUint256
+    );
+    const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'));
+    
+    const beforeBalance0 = await token0.balanceOf(trader)
+    const beforeBalance1 = await token1.balanceOf(trader)
+    let result = await router.removeLiquidityWithPermit(
+      token0.address,
+      token1.address,
+      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+      0,
+      0,
+      trader,
+      MaxUint256, /// deadline
+      false, /// approveMax
+      v,
+      r,
+      s,
+      {from: trader}
+    );
+    console.log('gas used', result.receipt.gasUsed);
+    await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+      reserve0: new BN(500),
+      reserve1: new BN(2000)
+    });
+    await expectEvent.inTransaction(result.tx, pair, 'Burn', {
+      sender: router.address,
+      amount0: token0Amount.sub(new BN(500)),
+      amount1: token1Amount.sub(new BN(2000)),
+      to: trader
+    });
+
+    Helper.assertEqual(await pair.balanceOf(trader), new BN(0));
+    Helper.assertEqual(await token0.balanceOf(trader), beforeBalance0.add(token0Amount).sub(new BN(500)));
+    Helper.assertEqual(await token1.balanceOf(trader), beforeBalance1.add(token1Amount).sub(new BN(2000)));
   });
 
   it('swapETHForExactTokens', async () => {
@@ -657,3 +716,23 @@ contract('XYZSwapRouter', function (accounts) {
     Helper.assertEqual(await token1.balanceOf(trader), initTokenAmount.add(outputAmount));
   });
 });
+
+async function getApprovalDigest (token, owner, spender, value, nonce, deadline) {
+  const name = await token.name();
+  const DOMAIN_SEPARATOR = await token.DOMAIN_SEPARATOR();
+
+  const tmp = web3.utils.soliditySha3(
+    web3.eth.abi.encodeParameters(
+      ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+      [PERMIT_TYPEHASH, owner, spender, value, nonce, deadline]
+    )
+  );
+  return web3.utils.soliditySha3(
+    '0x' +
+      Buffer.concat([
+        Buffer.from('1901', 'hex'),
+        Buffer.from(DOMAIN_SEPARATOR.slice(2), 'hex'),
+        Buffer.from(tmp.slice(2), 'hex')
+      ]).toString('hex')
+  );
+}

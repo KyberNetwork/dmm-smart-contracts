@@ -34,7 +34,10 @@
     "web3": "1.2.6"
   },
   "dependencies": {
+    "@nomiclabs/buidler-waffle": "^2.1.0",
     "@openzeppelin/contracts": "^3.2.0",
+    "ethereum-waffle": "^3.0.0",
+    "ethereumjs-util": "^7.0.7",
     "ethers": "^5.0.0",
     "web3-eth-abi": "^1.2.11"
   }

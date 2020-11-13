@@ -1,8 +1,9 @@
 usePlugin('@nomiclabs/buidler-truffle5');
 usePlugin('@nomiclabs/buidler-ethers');
 usePlugin('@nomiclabs/buidler-web3');
-usePlugin("solidity-coverage");
+usePlugin('@nomiclabs/buidler-waffle');
 usePlugin('buidler-contract-sizer');
+usePlugin("solidity-coverage");
 
 require('dotenv').config();
 
