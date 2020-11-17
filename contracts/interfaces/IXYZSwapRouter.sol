@@ -22,6 +22,22 @@ interface IXYZSwapRouter {
             uint256 liquidity
         );
 
+    function addLiquidityETH(
+        IERC20 token,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountETH,
+            uint256 liquidity
+        );
+
     function removeLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
@@ -31,6 +47,15 @@ interface IXYZSwapRouter {
         address to,
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityETH(
+        IERC20 token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountToken, uint256 amountETH);
 
     function removeLiquidityWithPermit(
         IERC20 tokenA,
@@ -46,6 +71,19 @@ interface IXYZSwapRouter {
         bytes32 s
     ) external returns (uint256 amountA, uint256 amountB);
 
+    function removeLiquidityETHWithPermit(
+        IERC20 token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountToken, uint256 amountETH);
+
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -57,6 +95,36 @@ interface IXYZSwapRouter {
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
+        IERC20[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function swapExactETHForTokens(
+        uint256 amountOutMin,
+        IERC20[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function swapTokensForExactETH(
+        uint256 amountOut,
+        uint256 amountInMax,
+        IERC20[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        IERC20[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapETHForExactTokens(
+        uint256 amountOut,
         IERC20[] calldata path,
         address to,
         uint256 deadline
