@@ -17,6 +17,7 @@ const ethAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 let trader;
 let feeTo;
 let liquidityProvider;
+let liquidityProviderPkKey;
 let app;
 let factory;
 let token0;
@@ -27,13 +28,14 @@ let router;
 let pair;
 let initTokenAmount = Helper.expandTo18Decimals(1000);
 const MaxUint256 = new BN(2).pow(new BN(256)).sub(new BN(1));
-const PERMIT_TYPEHASH = '0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9';
 
 contract('XYZSwapRouter', function (accounts) {
   beforeEach('setup', async () => {
     trader = accounts[1];
     app = accounts[2];
     liquidityProvider = accounts[3];
+    // key from buidler.config.js
+    liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
     feeTo = accounts[4];
 
     factory = await XYZSwapFactory.new(accounts[0]);
@@ -343,43 +345,39 @@ contract('XYZSwapRouter', function (accounts) {
   });
 
   it('removeLiquidityWithPermit', async () => {
-    const {waffle} = require('@nomiclabs/buidler');
-    const [wallet] = waffle.provider.getWallets();
-    const trader = wallet.address;
-
     const token0Amount = Helper.expandTo18Decimals(1);
     const token1Amount = Helper.expandTo18Decimals(4);
     await token0.transfer(pair.address, token0Amount, {from: trader});
     await token1.transfer(pair.address, token1Amount, {from: trader});
-    await pair.mint(trader);
+    await pair.mint(liquidityProvider);
     const expectedLiquidity = Helper.expandTo18Decimals(2);
 
-    const nonce = await pair.nonces(trader);
-    const digest = await getApprovalDigest(
+    const nonce = await pair.nonces(liquidityProvider);
+    const digest = await Helper.getApprovalDigest(
       pair,
-      trader,
+      liquidityProvider,
       router.address,
       expectedLiquidity.sub(MINIMUM_LIQUIDITY),
       nonce,
       MaxUint256
     );
-    const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'));
-    
-    const beforeBalance0 = await token0.balanceOf(trader)
-    const beforeBalance1 = await token1.balanceOf(trader)
+    const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(liquidityProviderPkKey.slice(2), 'hex'));
+
+    const beforeBalance0 = await token0.balanceOf(liquidityProvider);
+    const beforeBalance1 = await token1.balanceOf(liquidityProvider);
     let result = await router.removeLiquidityWithPermit(
       token0.address,
       token1.address,
       expectedLiquidity.sub(MINIMUM_LIQUIDITY),
       0,
       0,
-      trader,
+      liquidityProvider,
       MaxUint256, /// deadline
       false, /// approveMax
       v,
       r,
       s,
-      {from: trader}
+      {from: liquidityProvider}
     );
     console.log('gas used', result.receipt.gasUsed);
     await expectEvent.inTransaction(result.tx, pair, 'Sync', {
@@ -390,12 +388,13 @@ contract('XYZSwapRouter', function (accounts) {
       sender: router.address,
       amount0: token0Amount.sub(new BN(500)),
       amount1: token1Amount.sub(new BN(2000)),
-      to: trader
+      to: liquidityProvider
     });
 
-    Helper.assertEqual(await pair.balanceOf(trader), new BN(0));
-    Helper.assertEqual(await token0.balanceOf(trader), beforeBalance0.add(token0Amount).sub(new BN(500)));
-    Helper.assertEqual(await token1.balanceOf(trader), beforeBalance1.add(token1Amount).sub(new BN(2000)));
+    Helper.assertEqual(await pair.nonces(liquidityProvider), new BN(1));
+    Helper.assertEqual(await pair.balanceOf(liquidityProvider), new BN(0));
+    Helper.assertEqual(await token0.balanceOf(liquidityProvider), beforeBalance0.add(token0Amount).sub(new BN(500)));
+    Helper.assertEqual(await token1.balanceOf(liquidityProvider), beforeBalance1.add(token1Amount).sub(new BN(2000)));
   });
 
   it('swapETHForExactTokens', async () => {
@@ -717,22 +716,3 @@ contract('XYZSwapRouter', function (accounts) {
   });
 });
 
-async function getApprovalDigest (token, owner, spender, value, nonce, deadline) {
-  const name = await token.name();
-  const DOMAIN_SEPARATOR = await token.DOMAIN_SEPARATOR();
-
-  const tmp = web3.utils.soliditySha3(
-    web3.eth.abi.encodeParameters(
-      ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
-      [PERMIT_TYPEHASH, owner, spender, value, nonce, deadline]
-    )
-  );
-  return web3.utils.soliditySha3(
-    '0x' +
-      Buffer.concat([
-        Buffer.from('1901', 'hex'),
-        Buffer.from(DOMAIN_SEPARATOR.slice(2), 'hex'),
-        Buffer.from(tmp.slice(2), 'hex')
-      ]).toString('hex')
-  );
-}
