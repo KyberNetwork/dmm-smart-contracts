@@ -1,6 +1,7 @@
 const Helper = require('./helper');
+const {MaxUint256, ethAddress, expandTo18Decimals, MINIMUM_LIQUIDITY} = require('./helper');
 const BN = web3.utils.BN;
-const {MaxUint256, ethAddress, expandTo18Decimals} = require('./helper');
+const {ecsign} = require('ethereumjs-util');
 
 const XYZSwapFactory = artifacts.require('XYZSwapFactory');
 const XYZSwapPair = artifacts.require('XYZSwapPair');
@@ -19,7 +20,9 @@ let liquidityProvider;
 contract('XYZSwapRouterv2', accounts => {
   before('set accounts', async () => {
     feeSetter = accounts[0];
-    liquidityProvider = accounts[1];
+    liquidityProvider = accounts[3];
+    // key from buidler.config.js
+    liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
     trader = accounts[2];
   });
 
@@ -159,46 +162,45 @@ contract('XYZSwapRouterv2', accounts => {
     );
   });
 
-  /*
   it('removeLiquidityETHWithPermitSupportingFeeOnTransferTokens', async () => {
-    const DTTAmount = expandTo18Decimals(1)
-      .mul(100)
-      .div(99);
-    const ETHAmount = expandTo18Decimals(4);
-    await addLiquidity(DTTAmount, ETHAmount);
+    let feeTokenAmount = expandTo18Decimals(1)
+      .mul(new BN(100))
+      .div(new BN(99));
+    let ethAmount = expandTo18Decimals(4);
+    await addLiquidity(feeTokenAmount, ethAmount, liquidityProvider);
 
     const expectedLiquidity = expandTo18Decimals(2);
 
-    const nonce = await pair.nonces(wallet.address);
-    const digest = await getApprovalDigest(
+    const nonce = await pair.nonces(liquidityProvider);
+    const digest = await Helper.getApprovalDigest(
       pair,
-      {owner: wallet.address, spender: router.address, value: expectedLiquidity.sub(MINIMUM_LIQUIDITY)},
+      liquidityProvider,
+      router.address,
+      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
       nonce,
       MaxUint256
     );
-    const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'));
+    const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(liquidityProviderPkKey.slice(2), 'hex'));
 
-    const DTTInPair = await DTT.balanceOf(pair.address);
-    const WETHInPair = await WETH.balanceOf(pair.address);
-    const liquidity = await pair.balanceOf(wallet.address);
+    feeTokenAmount = await feeToken.balanceOf(pair.address);
+    const liquidity = await pair.balanceOf(liquidityProvider);
     const totalSupply = await pair.totalSupply();
-    const NaiveDTTExpected = DTTInPair.mul(liquidity).div(totalSupply);
-    const WETHExpected = WETHInPair.mul(liquidity).div(totalSupply);
+    const feeTokenExpected = feeTokenAmount.mul(liquidity).div(totalSupply);
+    const ethExpected = ethAmount.mul(liquidity).div(totalSupply);
 
-    await pair.approve(router.address, MaxUint256);
+    await pair.approve(router.address, MaxUint256, {from: liquidityProvider});
     await router.removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-      DTT.address,
+      feeToken.address,
       liquidity,
-      NaiveDTTExpected,
-      WETHExpected,
-      wallet.address,
+      feeTokenExpected,
+      ethExpected,
+      liquidityProvider,
       MaxUint256,
       false,
       v,
       r,
       s,
-      overrides
+      {from: liquidityProvider}
     );
   });
-  */
 });
