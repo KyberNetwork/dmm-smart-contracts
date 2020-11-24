@@ -163,27 +163,24 @@ contract('XYZSwapRouterv2', accounts => {
   });
 
   it('removeLiquidityETHWithPermitSupportingFeeOnTransferTokens', async () => {
-    let feeTokenAmount = expandTo18Decimals(1)
-      .mul(new BN(100))
-      .div(new BN(99));
+    let feeTokenAmount = expandTo18Decimals(1);
     let ethAmount = expandTo18Decimals(4);
     await addLiquidity(feeTokenAmount, ethAmount, liquidityProvider);
 
-    const expectedLiquidity = expandTo18Decimals(2);
+    const liquidity = await pair.balanceOf(liquidityProvider);
 
     const nonce = await pair.nonces(liquidityProvider);
     const digest = await Helper.getApprovalDigest(
       pair,
       liquidityProvider,
       router.address,
-      expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+      liquidity,
       nonce,
       MaxUint256
     );
     const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(liquidityProviderPkKey.slice(2), 'hex'));
 
     feeTokenAmount = await feeToken.balanceOf(pair.address);
-    const liquidity = await pair.balanceOf(liquidityProvider);
     const totalSupply = await pair.totalSupply();
     const feeTokenExpected = feeTokenAmount.mul(liquidity).div(totalSupply);
     const ethExpected = ethAmount.mul(liquidity).div(totalSupply);
