@@ -34,7 +34,7 @@ contract('XYZSwapRouter', function (accounts) {
     trader = accounts[1];
     app = accounts[2];
     liquidityProvider = accounts[3];
-    // key from buidler.config.js
+    // key from hardhat.config.js
     liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
     feeTo = accounts[4];
 
