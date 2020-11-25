@@ -16,7 +16,7 @@ contract MockFeeOnTransferERC20 is ERC20 {
         address to,
         uint256 value
     ) internal override {
-        uint256 burnAmount = value / 100;
+        uint256 burnAmount = (value * 13) / 10000;
         _burn(from, burnAmount);
         uint256 transferAmount = value.sub(burnAmount);
 
