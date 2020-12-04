@@ -1,5 +1,5 @@
 #!/bin/sh
-# because compile with coverage will change the bytecode of uniswap pair so we must replace them
-sed -i '.original' -e 's/ef3c5153c31f574e4449543251840d291014435af4be92d9e7e241fdb631fbf5/4ff2b9a62c243f8467a5bc13e0f0a5c1a4c405932f9336b0e2ab99065c6c66c4/g' contracts/libraries/XYZSwapLibrary.sol
+# because compile with coverage will change the bytecode of xyzswap pair so we must replace them
+sed -i '.original' -e 's/1fbf890e3383ea20f3a8975d705f6eb233790bdda3640212fa992b1ae4a8adc4/4c0d03e56a7e1c6b88445a539ac93fc4dc57e5b7ee92485439311f6f59101a07/g' contracts/libraries/XYZSwapLibrary.sol
 yarn hardhat coverage
-sed -i '.original' -e 's/4ff2b9a62c243f8467a5bc13e0f0a5c1a4c405932f9336b0e2ab99065c6c66c4/ef3c5153c31f574e4449543251840d291014435af4be92d9e7e241fdb631fbf5/g' contracts/libraries/XYZSwapLibrary.sol
+sed -i '.original' -e 's/4c0d03e56a7e1c6b88445a539ac93fc4dc57e5b7ee92485439311f6f59101a07/1fbf890e3383ea20f3a8975d705f6eb233790bdda3640212fa992b1ae4a8adc4/g' contracts/libraries/XYZSwapLibrary.sol

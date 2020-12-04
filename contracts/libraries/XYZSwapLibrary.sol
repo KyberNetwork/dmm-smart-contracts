@@ -35,7 +35,7 @@ library XYZSwapLibrary {
                         hex"ff",
                         factory,
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"ef3c5153c31f574e4449543251840d291014435af4be92d9e7e241fdb631fbf5" // init code hash
+                        hex"1fbf890e3383ea20f3a8975d705f6eb233790bdda3640212fa992b1ae4a8adc4" // init code hash
                     )
                 )
             )
@@ -59,6 +59,18 @@ library XYZSwapLibrary {
         (IERC20 token0, ) = sortTokens(tokenA, tokenB);
         (reserveA, reserveB, fee) = IXYZSwapPair(pairFor(factory, tokenA, tokenB)).getTradeInfo();
         (reserveA, reserveB) = tokenA == token0 ? (reserveA, reserveB) : (reserveB, reserveA);
+    }
+
+    // fetches and sorts the reserves for a pair
+    function getReserves(
+        address factory,
+        IERC20 tokenA,
+        IERC20 tokenB
+    ) internal view returns (uint256 reserveA, uint256 reserveB) {
+        (IERC20 token0, ) = sortTokens(tokenA, tokenB);
+        (uint256 reserve0, uint256 reserve1, ) = IXYZSwapPair(pairFor(factory, tokenA, tokenB))
+            .getReserves();
+        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
