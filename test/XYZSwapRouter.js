@@ -683,6 +683,14 @@ contract('XYZSwapRouter', function (accounts) {
     ethPartnerAmount = ethPartnerAmount.sub(outputAmount);
     ethAmount = ethAmount.add(expectAmountIn);
 
+    await expectRevert(
+      router.swapETHForExactTokens(outputAmount, [token0.address, ethPartner.address], trader, bigAmount, {
+        from: trader,
+        value: Helper.expandTo18Decimals(1),
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: INVALID_PATH'
+    );
     result = await router.swapETHForExactTokens(outputAmount, path, trader, bigAmount, {
       from: trader,
       value: Helper.expandTo18Decimals(1),
@@ -752,6 +760,13 @@ contract('XYZSwapRouter', function (accounts) {
     initTokenAmount = initTokenAmount.sub(swapAmount);
     //using swapExactTokensForETH API
     expectAmountOut = (await router.getAmountsOut(swapAmount, path))[1];
+    await expectRevert(
+      router.swapExactTokensForETH(swapAmount, 0, [ethPartner.address, token0.address], trader, bigAmount, {
+        from: trader,
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: INVALID_PATH'
+    );
     result = await router.swapExactTokensForETH(swapAmount, 0, path, trader, bigAmount, {
       from: trader,
       gasPrice: new BN(0)
@@ -825,6 +840,21 @@ contract('XYZSwapRouter', function (accounts) {
     //using swapTokensForExactETH API
     await time.advanceBlock();
     expectAmountIn = (await router.getAmountsIn(outputAmount, path))[0];
+
+    await expectRevert(
+      router.swapTokensForExactETH(
+        outputAmount,
+        bigAmount,
+        [ethPartner.address, token0.address],
+        trader,
+        bigAmount,
+        {
+          from: trader,
+          gasPrice: new BN(0)
+        }
+      ),
+      'XYZSwapRouter: INVALID_PATH'
+    );
     result = await router.swapTokensForExactETH(outputAmount, bigAmount, path, trader, bigAmount, {
       from: trader,
       gasPrice: new BN(0)
@@ -902,6 +932,14 @@ contract('XYZSwapRouter', function (accounts) {
 
     expectedOutputAmount = (await router.getAmountsOut(swapAmount, path))[1];
 
+    await expectRevert(
+      router.swapExactETHForTokens(0, [token0.address, ethPartner.address], trader, bigAmount, {
+        from: trader,
+        value: swapAmount,
+        gasPrice: 0
+      }),
+      'XYZSwapRouter: INVALID_PATH'
+    );
     result = await router.swapExactETHForTokens(0, path, trader, bigAmount, {
       from: trader,
       value: swapAmount,
