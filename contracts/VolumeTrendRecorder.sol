@@ -55,14 +55,22 @@ contract VolumeTrendRecorder {
             return calculateRFactor(uint256(shortEMA), uint256(longEMA));
         }
 
+        /// long -short EMA 996
+        /// lastBlock 997
+
+        /// volume at 997 - volume at 998 (0) - volume at 999 (0)
+
+        /// 1000
+        /// long -short EMA  999
+
         uint256 _currentBlockVolume = uint256(currentBlockVolume);
         uint256 _shortEMA = newEMA(uint256(shortEMA), SHORT_ALPHA, _currentBlockVolume);
         uint256 _longEMA = newEMA(uint256(longEMA), LONG_ALPHA, _currentBlockVolume);
         // ema = ema * (1-aplha) ^(skipBlock -1)
-        _shortEMA = _shortEMA.unsafeMulInPercision(
+        _shortEMA = _shortEMA.mulInPercision(
             (MathExt.PRECISION - SHORT_ALPHA).unsafePowInPercision(skipBlock - 1)
         );
-        _longEMA = _longEMA.unsafeMulInPercision(
+        _longEMA = _longEMA.mulInPercision(
             (MathExt.PRECISION - LONG_ALPHA).unsafePowInPercision(skipBlock - 1)
         );
         shortEMA = safeUint128(_shortEMA);
@@ -82,10 +90,10 @@ contract VolumeTrendRecorder {
         uint256 _currentBlockVolume = currentBlockVolume;
         uint256 _shortEMA = newEMA(uint256(shortEMA), SHORT_ALPHA, _currentBlockVolume);
         uint256 _longEMA = newEMA(uint256(longEMA), LONG_ALPHA, _currentBlockVolume);
-        _shortEMA = uint256(_shortEMA).unsafeMulInPercision(
+        _shortEMA = uint256(_shortEMA).mulInPercision(
             (MathExt.PRECISION - SHORT_ALPHA).unsafePowInPercision(skipBlock - 1)
         );
-        _longEMA = uint256(_longEMA).unsafeMulInPercision(
+        _longEMA = uint256(_longEMA).mulInPercision(
             (MathExt.PRECISION - LONG_ALPHA).unsafePowInPercision(skipBlock - 1)
         );
         return calculateRFactor(_shortEMA, _longEMA);
