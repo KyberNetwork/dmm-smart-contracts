@@ -54,15 +54,6 @@ contract VolumeTrendRecorder {
             currentBlockVolume = safeUint128(uint256(currentBlockVolume).add(value));
             return calculateRFactor(uint256(shortEMA), uint256(longEMA));
         }
-
-        /// long -short EMA 996
-        /// lastBlock 997
-
-        /// volume at 997 - volume at 998 (0) - volume at 999 (0)
-
-        /// 1000
-        /// long -short EMA  999
-
         uint256 _currentBlockVolume = uint256(currentBlockVolume);
         uint256 _shortEMA = newEMA(uint256(shortEMA), SHORT_ALPHA, _currentBlockVolume);
         uint256 _longEMA = newEMA(uint256(longEMA), LONG_ALPHA, _currentBlockVolume);
