@@ -2,23 +2,23 @@
 pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./libraries/Math.sol";
 import "./libraries/MathExt.sol";
 import "./libraries/FeeFomula.sol";
-import "./libraries/UniERC20.sol";
 import "./libraries/ERC20Permit.sol";
-
 import "./interfaces/IXYZSwapPair.sol";
 import "./interfaces/IXYZSwapFactory.sol";
 import "./interfaces/IXYZSwapCallee.sol";
+
 import "./VolumeTrendRecorder.sol";
 
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using MathExt for uint256;
     using SafeMath for uint256;
-    using UniERC20 for IERC20;
+    using SafeERC20 for IERC20;
 
     uint256 public constant override MINIMUM_LIQUIDITY = 10**3;
 
@@ -50,15 +50,15 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     ///                 which performs important safety checks
     function mint(address to) external override nonReentrant returns (uint256 liquidity) {
         (uint112 _reserve0, uint112 _reserve1, ) = getReserves(); // gas savings
-        uint256 balance0 = token0.uniBalanceOf(address(this));
-        uint256 balance1 = token1.uniBalanceOf(address(this));
+        uint256 balance0 = token0.balanceOf(address(this));
+        uint256 balance1 = token1.balanceOf(address(this));
         uint256 amount0 = balance0.sub(_reserve0);
         uint256 amount1 = balance1.sub(_reserve1);
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
-            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+            liquidity = MathExt.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
             _mint(address(-1), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
             liquidity = Math.min(
@@ -84,8 +84,11 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         returns (uint256 amount0, uint256 amount1)
     {
         (uint112 _reserve0, uint112 _reserve1, ) = getReserves(); // gas savings
-        uint256 balance0 = token0.uniBalanceOf(address(this));
-        uint256 balance1 = token1.uniBalanceOf(address(this));
+        IERC20 _token0 = token0; // gas savings
+        IERC20 _token1 = token1; // gas savings
+
+        uint256 balance0 = _token0.balanceOf(address(this));
+        uint256 balance1 = _token1.balanceOf(address(this));
         uint256 liquidity = balanceOf(address(this));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
@@ -94,10 +97,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, "XYZSwap: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
-        token0.uniTransfer(to, amount0);
-        token1.uniTransfer(to, amount1);
-        balance0 = token0.uniBalanceOf(address(this));
-        balance1 = token1.uniBalanceOf(address(this));
+        _token0.safeTransfer(to, amount0);
+        _token1.safeTransfer(to, amount1);
+        balance0 = _token0.balanceOf(address(this));
+        balance1 = _token1.balanceOf(address(this));
 
         _update(balance0, balance1);
         if (feeOn) kLast = uint256(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
@@ -124,12 +127,12 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         {
             // scope for _token{0,1}, avoids stack too deep errors
             require(to != address(token0) && to != address(token1), "XYZSwap: INVALID_TO");
-            if (amount0Out > 0) token0.uniTransfer(to, amount0Out); // optimistically transfer tokens
-            if (amount1Out > 0) token1.uniTransfer(to, amount1Out); // optimistically transfer tokens
+            if (amount0Out > 0) token0.safeTransfer(to, amount0Out); // optimistically transfer tokens
+            if (amount1Out > 0) token1.safeTransfer(to, amount1Out); // optimistically transfer tokens
             if (data.length > 0)
                 IXYZSwapCallee(to).xyzSwapCall(msg.sender, amount0Out, amount1Out, data);
-            balance0 = token0.uniBalanceOf(address(this));
-            balance1 = token1.uniBalanceOf(address(this));
+            balance0 = token0.balanceOf(address(this));
+            balance1 = token1.balanceOf(address(this));
         }
         uint256 amount0In = balance0 > _reserve0 - amount0Out
             ? balance0 - (_reserve0 - amount0Out)
@@ -148,19 +151,19 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     /// @dev force balances to match reserves
     // TODO: review later
     function skim(address to) external override nonReentrant {
-        token0.uniTransfer(to, token0.uniBalanceOf(address(this)).sub(reserve0));
-        token1.uniTransfer(to, token1.uniBalanceOf(address(this)).sub(reserve1));
+        token0.safeTransfer(to, token0.balanceOf(address(this)).sub(reserve0));
+        token1.safeTransfer(to, token1.balanceOf(address(this)).sub(reserve1));
     }
 
     /// @dev force reserves to match balances
     function sync() external override nonReentrant {
         // in case of token like AMPL, we should also update EMA.
         uint256 _reserve0 = reserve0;
-        uint256 _newReserve0 = token0.uniBalanceOf(address(this));
+        uint256 _newReserve0 = token0.balanceOf(address(this));
         shortEMA = safeUint128(uint256(shortEMA).mul(_newReserve0).div(_reserve0));
         longEMA = safeUint128(uint256(longEMA).mul(_newReserve0).div(_reserve0));
 
-        _update(_newReserve0, token1.uniBalanceOf(address(this)));
+        _update(_newReserve0, token1.balanceOf(address(this)));
     }
 
     /// @dev returns data to calculate amountIn, amountOut
@@ -177,8 +180,8 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     {
         _reserve0 = reserve0;
         _reserve1 = reserve1;
-        uint256 rFactor = getRFactor(block.number);
-        feeInPrecision = FeeFomula.getFee(rFactor);
+        uint256 rFactorInPrecision = getRFactor(block.number);
+        feeInPrecision = FeeFomula.getFee(rFactorInPrecision);
     }
 
     /// @dev returns reserve data to calculate quote amount
@@ -204,18 +207,16 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 _reserve1,
         uint256 _balance0,
         uint256 _balance1
-    ) internal virtual returns (uint256 fee) {
+    ) internal virtual returns (uint256 feeInPrecision) {
         // volume will be normalized into amount in token 0
         uint256 volume = _reserve0.mul(_amount1In).div(_reserve1).add(_amount0In);
-        uint256 rFactor = recordNewTrade(block.number, volume);
-        fee = FeeFomula.getFee(rFactor);
+        uint256 rFactorInPrecision = recordNewUpdatedVolume(block.number, volume);
+        feeInPrecision = FeeFomula.getFee(rFactorInPrecision);
         //verify balance update is match with fomula
-        uint256 balance0Adjusted = _balance0.mul(MathExt.PRECISION).sub(_amount0In.mul(fee)).div(
-            MathExt.PRECISION
-        );
-        uint256 balance1Adjusted = _balance1.mul(MathExt.PRECISION).sub(_amount1In.mul(fee)).div(
-            MathExt.PRECISION
-        );
+        uint256 balance0Adjusted = _balance0.mul(PRECISION).sub(_amount0In.mul(feeInPrecision));
+        balance0Adjusted = balance0Adjusted.div(PRECISION);
+        uint256 balance1Adjusted = _balance1.mul(PRECISION).sub(_amount1In.mul(feeInPrecision));
+        balance1Adjusted = balance1Adjusted.div(PRECISION);
         require(balance0Adjusted.mul(balance1Adjusted) >= _reserve0.mul(_reserve1), "XYZSwap: K");
     }
 
@@ -236,8 +237,8 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 _kLast = kLast; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
-                uint256 rootK = Math.sqrt(uint256(_reserve0).mul(_reserve1));
-                uint256 rootKLast = Math.sqrt(_kLast);
+                uint256 rootK = MathExt.sqrt(uint256(_reserve0).mul(_reserve1));
+                uint256 rootKLast = MathExt.sqrt(_kLast);
                 if (rootK > rootKLast) {
                     uint256 numerator = totalSupply().mul(rootK.sub(rootKLast));
                     uint256 denominator = rootK.mul(5).add(rootKLast);

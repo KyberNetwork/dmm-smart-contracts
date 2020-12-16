@@ -192,15 +192,22 @@ contract('VolumeTrendRecorder', function (accounts) {
 
     let block = block0;
     let result = await recorder.mockUpdateVolume(new BN(50000), block);
-    console.log(`gasUsed ${result.receipt.gasUsed}`);
-
-    block = block0 + 1;
+    let readGasCost = await recorder.testGasCostGetRFactor(block);
+    console.log(`getRFactor for skipBlock=1 gasUsed=${readGasCost}`);
     result = await recorder.mockUpdateVolume(new BN(50000), block);
-    console.log(`gasUsed ${result.receipt.gasUsed}`);
+    console.log(`update volume skipBlock=0 gasUsed=${result.receipt.gasUsed}`);
 
-    block = block0 + 10000;
+    block = block + 1;
+    readGasCost = await recorder.testGasCostGetRFactor(block);
+    console.log(`getRFactor for skipBlock=1 gasUsed=${readGasCost}`);
     result = await recorder.mockUpdateVolume(new BN(50000), block);
-    console.log(`gasUsed ${result.receipt.gasUsed}`);
+    console.log(`update volume skipBlock=1 gasUsed=${result.receipt.gasUsed}`);
+
+    block = block + 10000;
+    readGasCost = await recorder.testGasCostGetRFactor(block);
+    console.log(`getRFactor for skipBlock=1 gasUsed=${readGasCost}`);
+    result = await recorder.mockUpdateVolume(new BN(50000), block);
+    console.log(`update volume skipBlock=9999 gasUsed=${result.receipt.gasUsed}`);
   });
 });
 

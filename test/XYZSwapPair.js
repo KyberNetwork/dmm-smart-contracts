@@ -338,6 +338,7 @@ contract('XYZSwapPair', function (accounts) {
       await token1.balanceOf(liquidityProvider),
       beforeAmountToken1.add(token1Amount.sub(MINIMUM_LIQUIDITY))
     );
+    console.log(`burn gas used ${result.receipt.gasUsed}`);
   });
 
   it('feeTo:off', async () => {
