@@ -25,7 +25,7 @@ contract('ema simulation', accounts => {
       fd = fs.openSync(path, 'a');
       fs.appendFileSync(fd, `block\tshorEMA\tlongEMA\trFactor\tfee\n`, 'utf8');
       for (let i = 0; i < 10800; i++) {
-        await recorder.mockUpdateVolume(new BN(2).mul(baseVolume), block);
+        await recorder.mockRecordNewUpdatedVolume(new BN(2).mul(baseVolume), block);
 
         if (i % 20 == 0) {
           let rFactor = await recorder.mockGetRFactor(block + 1);

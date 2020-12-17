@@ -8,7 +8,7 @@ contract VolumeTrendRecorder {
     using MathExt for uint256;
     using SafeMath for uint256;
 
-    uint256 private constant MAX_UINT128 = 1 << (128 - 1);
+    uint256 private constant MAX_UINT128 = 2**128 - 1;
     uint256 internal constant PRECISION = 10**18;
     uint256 private constant SHORT_ALPHA = (2 * PRECISION) / 5401;
     uint256 private constant LONG_ALPHA = (2 * PRECISION) / 10801;
@@ -123,12 +123,12 @@ contract VolumeTrendRecorder {
     }
 
     function safeUint128(uint256 v) internal pure returns (uint128) {
-        require(v < MAX_UINT128, "overflow uint128");
+        require(v <= MAX_UINT128, "overflow uint128");
         return uint128(v);
     }
 
     function safeUint128(uint256 v, string memory errorMessage) internal pure returns (uint128) {
-        require(v < MAX_UINT128, errorMessage);
+        require(v <= MAX_UINT128, errorMessage);
         return uint128(v);
     }
 }

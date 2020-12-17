@@ -7,11 +7,11 @@ while getopts "f:" arg; do
 done
 
 # because compile with coverage will change the bytecode of xyzswap pair so we must replace them
-sed -i '.original' -e 's/558d6bb1d967c75474673a2c4379bbb0dc78edb48b55f1d00667922b25b0332d/77854f5a617e57b8e054e9182dc8db4ec59affc0e15be0e89996f71c0f9f68aa/g' contracts/libraries/XYZSwapLibrary.sol
+sed -i '.original' -e 's/091cf61156ea154bc288b0b6cc45d3908cf82196f6ed992f3d1754cd3e17e08f/0b4b43e774b81801859ca623aa5ee058a170454d9b658274bed895da0127dbd7/g' contracts/libraries/XYZSwapLibrary.sol
 if [ -n "$FILE" ]
 then
     yarn hardhat coverage --testfiles $FILE
 else
     yarn hardhat coverage
 fi
-sed -i '.original' -e 's/77854f5a617e57b8e054e9182dc8db4ec59affc0e15be0e89996f71c0f9f68aa/558d6bb1d967c75474673a2c4379bbb0dc78edb48b55f1d00667922b25b0332d/g' contracts/libraries/XYZSwapLibrary.sol
+sed -i '.original' -e 's/0b4b43e774b81801859ca623aa5ee058a170454d9b658274bed895da0127dbd7/091cf61156ea154bc288b0b6cc45d3908cf82196f6ed992f3d1754cd3e17e08f/g' contracts/libraries/XYZSwapLibrary.sol

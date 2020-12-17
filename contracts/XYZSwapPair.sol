@@ -12,32 +12,40 @@ import "./libraries/ERC20Permit.sol";
 import "./interfaces/IXYZSwapPair.sol";
 import "./interfaces/IXYZSwapFactory.sol";
 import "./interfaces/IXYZSwapCallee.sol";
-
 import "./VolumeTrendRecorder.sol";
 
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
-    using MathExt for uint256;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    uint256 public constant override MINIMUM_LIQUIDITY = 10**3;
+    uint256 public constant MINIMUM_LIQUIDITY = 10**3;
 
-    address public override factory;
-    IERC20 public override token0;
-    IERC20 public override token1;
+    address public factory;
+    IERC20 public token0;
+    IERC20 public token1;
 
     /// @dev uses single storage slot, accessible via getReserves
     uint112 internal reserve0;
     uint112 internal reserve1;
     uint32 internal blockTimestampLast;
     /// @dev reserve0 * reserve1, as of immediately after the most recent liquidity event
-    uint256 public override kLast;
+    uint256 public kLast;
+
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
+    event Swap(
+        address indexed sender,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address indexed to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
 
     constructor() public ERC20Permit("XYZSwap LP", "XYZ-LP", "1") VolumeTrendRecorder(0) {
         factory = msg.sender;
     }
-
-    receive() external payable {}
 
     // called once by the factory at time of deployment
     function initialize(IERC20 _token0, IERC20 _token1) external override {
@@ -126,13 +134,15 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 balance1;
         {
             // scope for _token{0,1}, avoids stack too deep errors
-            require(to != address(token0) && to != address(token1), "XYZSwap: INVALID_TO");
-            if (amount0Out > 0) token0.safeTransfer(to, amount0Out); // optimistically transfer tokens
-            if (amount1Out > 0) token1.safeTransfer(to, amount1Out); // optimistically transfer tokens
+            IERC20 _token0 = token0;
+            IERC20 _token1 = token1;
+            require(to != address(_token0) && to != address(_token1), "XYZSwap: INVALID_TO");
+            if (amount0Out > 0) _token0.safeTransfer(to, amount0Out); // optimistically transfer tokens
+            if (amount1Out > 0) _token1.safeTransfer(to, amount1Out); // optimistically transfer tokens
             if (data.length > 0)
                 IXYZSwapCallee(to).xyzSwapCall(msg.sender, amount0Out, amount1Out, data);
-            balance0 = token0.balanceOf(address(this));
-            balance1 = token1.balanceOf(address(this));
+            balance0 = _token0.balanceOf(address(this));
+            balance1 = _token1.balanceOf(address(this));
         }
         uint256 amount0In = balance0 > _reserve0 - amount0Out
             ? balance0 - (_reserve0 - amount0Out)
@@ -149,14 +159,13 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     }
 
     /// @dev force balances to match reserves
-    // TODO: review later
-    function skim(address to) external override nonReentrant {
+    function skim(address to) external nonReentrant {
         token0.safeTransfer(to, token0.balanceOf(address(this)).sub(reserve0));
         token1.safeTransfer(to, token1.balanceOf(address(this)).sub(reserve1));
     }
 
     /// @dev force reserves to match balances
-    function sync() external override nonReentrant {
+    function sync() external nonReentrant {
         // in case of token like AMPL, we should also update EMA.
         uint256 _reserve0 = reserve0;
         uint256 _newReserve0 = token0.balanceOf(address(this));

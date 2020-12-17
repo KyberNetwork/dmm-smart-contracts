@@ -28,7 +28,8 @@ let weth;
 let router;
 let pair;
 let initTokenAmount = Helper.expandTo18Decimals(1000);
-const MaxUint256 = new BN(2).pow(new BN(256)).sub(new BN(1));
+const BNOne = new BN(1);
+const MaxUint256 = new BN(2).pow(new BN(256)).sub(BNOne);
 
 contract('XYZSwapRouter', function (accounts) {
   beforeEach('setup', async () => {
@@ -580,7 +581,25 @@ contract('XYZSwapRouter', function (accounts) {
     let tokenBalance = await ethPartner.balanceOf(trader);
     let ethBalance = await Helper.getBalancePromise(trader);
     const path = [weth.address, ethPartner.address];
-    // using swapTokensForExactTokens API
+    // revert if invalid path
+    await expectRevert(
+      router.swapETHForExactTokens(outputAmount, [token0.address, ethPartner.address], trader, bigAmount, {
+        from: trader,
+        value: swapAmount,
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: INVALID_PATH'
+    );
+    // revert if excessive input amount
+    await expectRevert(
+      router.swapETHForExactTokens(outputAmount, path, trader, bigAmount, {
+        from: trader,
+        value: expectAmountIn.sub(new BN(1)),
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT'
+    );
+
     result = await router.swapETHForExactTokens(outputAmount, path, trader, bigAmount, {
       from: trader,
       value: swapAmount,
@@ -604,6 +623,23 @@ contract('XYZSwapRouter', function (accounts) {
 
     Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.add(outputAmount));
     Helper.assertEqual(await Helper.getBalancePromise(trader), ethBalance.sub(expectAmountIn));
+
+    // edge case not refund dust eth if msg.value = amounts[0]
+    await time.advanceBlock();
+    tradeInfo = await ethPair.getTradeInfo();
+    expectAmountIn = await router.getAmountIn(
+      outputAmount,
+      ethPairToken0 === weth.address ? tradeInfo._reserve0 : tradeInfo._reserve1, // reserveIn
+      ethPairToken0 === weth.address ? tradeInfo._reserve1 : tradeInfo._reserve0, // reserveOut
+      tradeInfo.feeInPrecision
+    );
+
+    result = await router.swapETHForExactTokens(outputAmount, path, trader, bigAmount, {
+      from: trader,
+      value: expectAmountIn,
+      gasPrice: new BN(0)
+    });
+    console.log('gas used', result.receipt.gasUsed);
   });
 
   it('swapExactTokensForETH', async () => {
@@ -630,6 +666,13 @@ contract('XYZSwapRouter', function (accounts) {
         gasPrice: new BN(0)
       }),
       'XYZSwapRouter: INVALID_PATH'
+    );
+    await expectRevert(
+      router.swapExactTokensForETH(swapAmount, expectAmountOut.add(BNOne), path, trader, bigAmount, {
+        from: trader,
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT'
     );
     let result = await router.swapExactTokensForETH(swapAmount, 0, path, trader, bigAmount, {
       from: trader,
@@ -683,6 +726,14 @@ contract('XYZSwapRouter', function (accounts) {
         gasPrice: new BN(0)
       }),
       'XYZSwapRouter: INVALID_PATH'
+    );
+
+    await expectRevert(
+      router.swapTokensForExactETH(outputAmount, expectAmountIn.sub(BNOne), path, trader, bigAmount, {
+        from: trader,
+        gasPrice: new BN(0)
+      }),
+      'XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT'
     );
     let result = await router.swapTokensForExactETH(outputAmount, bigAmount, path, trader, bigAmount, {
       from: trader,
@@ -738,6 +789,14 @@ contract('XYZSwapRouter', function (accounts) {
         gasPrice: 0
       }),
       'XYZSwapRouter: INVALID_PATH'
+    );
+    await expectRevert(
+      router.swapExactETHForTokens(expectedOutputAmount.add(BNOne), path, trader, bigAmount, {
+        from: trader,
+        value: swapAmount,
+        gasPrice: 0
+      }),
+      'XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT'
     );
     let result = await router.swapExactETHForTokens(0, path, trader, bigAmount, {
       from: trader,

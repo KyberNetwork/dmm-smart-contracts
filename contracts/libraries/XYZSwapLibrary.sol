@@ -35,7 +35,7 @@ library XYZSwapLibrary {
                         hex"ff",
                         factory,
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"558d6bb1d967c75474673a2c4379bbb0dc78edb48b55f1d00667922b25b0332d" // init code hash
+                        hex"091cf61156ea154bc288b0b6cc45d3908cf82196f6ed992f3d1754cd3e17e08f" // init code hash
                     )
                 )
             )
@@ -130,12 +130,12 @@ library XYZSwapLibrary {
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         for (uint256 i; i < path.length - 1; i++) {
-            (uint256 reserveIn, uint256 reserveOut, uint256 fee) = getTradeInfo(
+            (uint256 reserveIn, uint256 reserveOut, uint256 feeInPrecision) = getTradeInfo(
                 factory,
                 path[i],
                 path[i + 1]
             );
-            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut, fee);
+            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut, feeInPrecision);
         }
     }
 
@@ -149,12 +149,12 @@ library XYZSwapLibrary {
         amounts = new uint256[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint256 i = path.length - 1; i > 0; i--) {
-            (uint256 reserveIn, uint256 reserveOut, uint256 fee) = getTradeInfo(
+            (uint256 reserveIn, uint256 reserveOut, uint256 feeInPrecision) = getTradeInfo(
                 factory,
                 path[i - 1],
                 path[i]
             );
-            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut, fee);
+            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut, feeInPrecision);
         }
     }
 }

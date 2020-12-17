@@ -4,8 +4,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IXYZSwapExchangeRouter.sol";
 import "./IXYZSwapLiquidityRouter.sol";
-import "./IXYZSwapFactory.sol";
-import "./IWETH.sol";
 
 /// @dev full interface for router
 interface IXYZSwapRouter01 is IXYZSwapExchangeRouter, IXYZSwapLiquidityRouter {
