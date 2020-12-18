@@ -8,7 +8,7 @@ const {precisionUnits} = require('../helper');
 const Helper = require('../helper');
 const {expectRevert} = require('@openzeppelin/test-helpers');
 
-contract(MathExt, function (accounts) {
+contract('MathExt', function (accounts) {
   before('init contract', async () => {
     mathExt = await MathExt.new();
   });
@@ -40,5 +40,16 @@ contract(MathExt, function (accounts) {
       mathExt.powInPrecision(Helper.precisionUnits.add(new BN(1)), new BN(5)),
       'MathExt: x > PRECISION'
     );
+  });
+
+  it('test sqrt', async () => {
+    Helper.assertEqual(await mathExt.sqrt(0), new BN(0));
+    Helper.assertEqual(await mathExt.sqrt(1), new BN(1));
+    Helper.assertEqual(await mathExt.sqrt(2), new BN(1));
+    Helper.assertEqual(await mathExt.sqrt(3), new BN(1));
+
+    Helper.assertEqual(await mathExt.sqrt(4), new BN(2));
+    Helper.assertEqual(await mathExt.sqrt(8), new BN(2));
+    Helper.assertEqual(await mathExt.sqrt(9), new BN(3));
   });
 });

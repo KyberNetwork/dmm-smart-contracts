@@ -9,6 +9,7 @@ import "./interfaces/IXYZSwapFactory.sol";
 import "./interfaces/IXYZSwapRouter02.sol";
 import "./interfaces/IERC20Permit.sol";
 import "./interfaces/IXYZSwapPair.sol";
+import "./interfaces/IWETH.sol";
 import "./libraries/XYZSwapLibrary.sol";
 
 contract XYZSwapRouter02 is IXYZSwapRouter02 {

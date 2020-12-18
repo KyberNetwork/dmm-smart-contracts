@@ -12,4 +12,8 @@ contract MockMathExt {
     function powInPrecision(uint256 x, uint256 k) external pure returns (uint256) {
         return x.unsafePowInPrecision(k);
     }
+
+    function sqrt(uint256 x) external pure returns (uint256) {
+        return x.sqrt();
+    }
 }
