@@ -93,6 +93,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             amountBMin
         );
         address pair = XYZSwapLibrary.pairFor(factory, tokenA, tokenB);
+        // using tokenA.safeTransferFrom will get "Stack too deep"
         SafeERC20.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         SafeERC20.safeTransferFrom(tokenB, msg.sender, pair, amountB);
         liquidity = IXYZSwapPair(pair).mint(to);
@@ -150,7 +151,6 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         (uint256 amount0, uint256 amount1) = IXYZSwapPair(pair).burn(to);
         (IERC20 token0, ) = XYZSwapLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        //TODO: this safe check should put at the start of the function
         require(amountA >= amountAMin, "XYZSwapRouter: INSUFFICIENT_A_AMOUNT");
         require(amountB >= amountBMin, "XYZSwapRouter: INSUFFICIENT_B_AMOUNT");
     }
