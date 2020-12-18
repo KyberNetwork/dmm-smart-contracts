@@ -29,7 +29,7 @@ contract('ema simulation', accounts => {
 
         if (i % 20 == 0) {
           let rFactor = await recorder.mockGetRFactor(block + 1);
-          let recorderData = await recorder.getVolumeRecorder();
+          let recorderData = await recorder.getVolumeTrendData();
           let fee = await feeFomula.getFee(rFactor);
           fs.appendFileSync(
             fd,
@@ -65,7 +65,7 @@ contract('ema simulation', accounts => {
       for (let i = 0; i < 10800; i += 20) {
         if (i % 20 == 0) {
           let rFactor = await recorder.mockGetRFactor(block + 1);
-          let recorderData = await recorder.getVolumeRecorder();
+          let recorderData = await recorder.getVolumeTrendData();
           let fee = await feeFomula.getFee(rFactor);
           fs.appendFileSync(
             fd,

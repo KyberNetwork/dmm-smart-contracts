@@ -2,8 +2,9 @@ pragma solidity 0.6.6;
 
 import "./libraries/MathExt.sol";
 
-/// @dev contract to calculate volume trend
+/// @dev contract to calculate volume trend. See secion 3.1 in the white paper
 /// @dev EMA stands for Exponential moving average
+/// @dev https://en.wikipedia.org/wiki/Moving_average
 contract VolumeTrendRecorder {
     using MathExt for uint256;
     using SafeMath for uint256;
@@ -27,7 +28,7 @@ contract VolumeTrendRecorder {
         lastTradeBlock = safeUint128(block.number);
     }
 
-    function getVolumeRecorder()
+    function getVolumeTrendData()
         external
         view
         returns (

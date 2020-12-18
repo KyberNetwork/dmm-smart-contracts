@@ -51,7 +51,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     let result = await recorder.mockRecordNewUpdatedVolume(new BN(50000), block);
     expectEvent.notEmitted(result, 'UpdateEMA');
     data = [50000, 0];
-    let record = await recorder.getVolumeRecorder();
+    let record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._shortEMA, ema0);
     Helper.assertEqual(record._longEMA, ema0);
     Helper.assertEqual(record._currentBlockVolume, new BN(50000));
@@ -65,7 +65,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     result = await recorder.mockRecordNewUpdatedVolume(new BN(30000), block);
     expectEvent.notEmitted(result, 'UpdateEMA');
     data = [80000, 0];
-    record = await recorder.getVolumeRecorder();
+    record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._shortEMA, ema0);
     Helper.assertEqual(record._longEMA, ema0);
     Helper.assertEqual(record._currentBlockVolume, new BN(80000));
@@ -89,7 +89,7 @@ contract('VolumeTrendRecorder', function (accounts) {
 
     data = [80000, 9000, 0];
 
-    record = await recorder.getVolumeRecorder();
+    record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._shortEMA, numerator);
     Helper.assertEqual(record._longEMA, denominator);
     Helper.assertEqual(record._currentBlockVolume, new BN(9000));
@@ -119,7 +119,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     //create an update volume and data
     await recorder.mockRecordNewUpdatedVolume(new BN(50000), block);
     data = [50000, 0, 0];
-    let record = await recorder.getVolumeRecorder();
+    let record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._shortEMA, ema0);
     Helper.assertEqual(record._longEMA, ema0);
     Helper.assertEqual(record._currentBlockVolume, new BN(50000));
@@ -136,7 +136,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     await recorder.mockRecordNewUpdatedVolume(new BN(30000), block);
     data = [50000, 0, 30000, 0];
 
-    record = await recorder.getVolumeRecorder();
+    record = await recorder.getVolumeTrendData();
     Helper.assertApproximate(record._shortEMA, numerator);
     Helper.assertApproximate(record._longEMA, denominator);
     Helper.assertEqual(record._currentBlockVolume, new BN(30000));
@@ -166,7 +166,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     //create an update volume and data
     await recorder.mockRecordNewUpdatedVolume(new BN(50000), block);
     data = [50000, 0, 0, 0, 0];
-    let record = await recorder.getVolumeRecorder();
+    let record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._shortEMA, ema0);
     Helper.assertEqual(record._longEMA, ema0);
     Helper.assertEqual(record._currentBlockVolume, new BN(50000));
@@ -182,7 +182,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     //create an update volume and data
     await recorder.mockRecordNewUpdatedVolume(new BN(30000), block);
     data = [50000, 0, 0, 30000, 0];
-    record = await recorder.getVolumeRecorder();
+    record = await recorder.getVolumeTrendData();
     Helper.assertApproximate(record._shortEMA, numerator);
     Helper.assertApproximate(record._longEMA, denominator);
     Helper.assertEqual(record._currentBlockVolume, new BN(30000));
@@ -203,7 +203,7 @@ contract('VolumeTrendRecorder', function (accounts) {
     let block0 = recordInfo._lastTradeBlock.toNumber();
     await expectRevert(recorder.mockRecordNewUpdatedVolume(new BN(2).pow(new BN(128)), block0), 'volume exceeds valid range');
     await recorder.mockRecordNewUpdatedVolume(MaxUint128, block0);
-    let record = await recorder.getVolumeRecorder();
+    let record = await recorder.getVolumeTrendData();
     Helper.assertEqual(record._currentBlockVolume, MaxUint128);
   });
 

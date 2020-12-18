@@ -22,7 +22,7 @@ library FeeFomula {
     // C2 = 25 * PRECISION - (F * (PRECISION - G)**2) / ((PRECISION - G)**2 + L * PRECISION)
     uint256 private constant C2 = 20036905816356657810;
 
-    /// @dev calculate fee from rFactorInPrecision, see section 2 in xyzswap white paper
+    /// @dev calculate fee from rFactorInPrecision, see section 3.2 in xyzswap white paper
     /// @dev fee in [15, 60] bps
     /// @return fee percentage in Precision
     function getFee(uint256 rFactorInPrecision) internal pure returns (uint256) {
@@ -40,15 +40,16 @@ library FeeFomula {
                 return C1.sub(A.mulInPrecision(tmp3)).sub(B.mulInPrecision(tmp)) / 10000;
             }
         } else {
+            // [ C2 + sign(r - G) *  F * (r-G) ^2 / (L + (r-G) ^2) ] / 10000
             uint256 tmp = (
                 rFactorInPrecision > G ? (rFactorInPrecision - G) : (G - rFactorInPrecision)
             );
             tmp = tmp.unsafePowInPrecision(2);
             uint256 tmp2 = F.mul(tmp).div(tmp.add(L));
             if (rFactorInPrecision > G) {
-                return (C2 + tmp2) / 10000;
+                return C2.add(tmp2) / 10000;
             } else {
-                return (C2 - tmp2) / 10000;
+                return C2.sub(tmp2) / 10000;
             }
         }
     }
