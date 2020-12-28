@@ -5,13 +5,25 @@ const precisionUnits = new BN(10).pow(new BN(18));
 const zeroBN = new BN(0);
 const ethAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 const MaxUint256 = new BN(2).pow(new BN(256)).sub(new BN(1));
+const BPS = new BN(10000);
+const Q112 = new BN(2).pow(new BN(112));
 
 require('chai')
   .use(require('chai-as-promised'))
   .use(require('chai-bn')(BN))
   .should();
 
-module.exports = {precisionUnits, assertEqual, assertApproximate, zeroBN, ethAddress, MINIMUM_LIQUIDITY, MaxUint256};
+module.exports = {
+  precisionUnits,
+  assertEqual,
+  assertApproximate,
+  zeroBN,
+  ethAddress,
+  MINIMUM_LIQUIDITY,
+  MaxUint256,
+  BPS,
+  Q112
+};
 
 function assertEqual (val1, val2, errorStr) {
   assert(new BN(val1).should.be.a.bignumber.that.equals(new BN(val2)), errorStr);

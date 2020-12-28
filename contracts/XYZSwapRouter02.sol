@@ -14,39 +14,38 @@ import "./libraries/XYZSwapLibrary.sol";
 
 contract XYZSwapRouter02 is IXYZSwapRouter02 {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
     using SafeMath for uint256;
 
     address public immutable override factory;
-    address public immutable override weth;
+    IWETH public immutable override weth;
 
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "XYZSwapRouter: EXPIRED");
         _;
     }
 
-    constructor(address _factory, address _weth) public {
+    constructor(address _factory, IWETH _weth) public {
         factory = _factory;
         weth = _weth;
     }
 
     receive() external payable {
-        assert(msg.sender == weth); // only accept ETH via fallback from the WETH contract
+        assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
     }
 
     // **** ADD LIQUIDITY ****
     function _addLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
+        address pair,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
         uint256 amountBMin
-    ) internal virtual returns (uint256 amountA, uint256 amountB) {
-        // create the pair if it doesn't exist yet
-        if (IXYZSwapFactory(factory).getPair(tokenA, tokenB) == address(0)) {
-            IXYZSwapFactory(factory).createPair(tokenA, tokenB);
-        }
-        (uint256 reserveA, uint256 reserveB) = XYZSwapLibrary.getReserves(factory, tokenA, tokenB);
+    ) internal virtual view returns (uint256 amountA, uint256 amountB) {
+        require(pair != address(0), "invalid pair address");
+        (uint256 reserveA, uint256 reserveB) = XYZSwapLibrary.getReserves(pair, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
@@ -66,6 +65,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function addLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
+        address pair,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
@@ -76,7 +76,6 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         external
         virtual
         override
-        payable
         ensure(deadline)
         returns (
             uint256 amountA,
@@ -84,15 +83,16 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             uint256 liquidity
         )
     {
+        require(verifyPairAddress(tokenA, tokenB, pair), "XYZSwapRouter: INVALID_PAIR");
         (amountA, amountB) = _addLiquidity(
             tokenA,
             tokenB,
+            pair,
             amountADesired,
             amountBDesired,
             amountAMin,
             amountBMin
         );
-        address pair = XYZSwapLibrary.pairFor(factory, tokenA, tokenB);
         // using tokenA.safeTransferFrom will get "Stack too deep"
         SafeERC20.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         SafeERC20.safeTransferFrom(tokenB, msg.sender, pair, amountB);
@@ -101,6 +101,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     function addLiquidityETH(
         IERC20 token,
+        address pair,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -117,18 +118,19 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             uint256 liquidity
         )
     {
+        require(verifyPairAddress(token, weth, pair), "XYZSwapRouter: INVALID_PAIR");
         (amountToken, amountETH) = _addLiquidity(
             token,
-            IERC20(weth),
+            weth,
+            pair,
             amountTokenDesired,
             msg.value,
             amountTokenMin,
             amountETHMin
         );
-        address pair = XYZSwapLibrary.pairFor(address(factory), token, IERC20(weth));
         token.safeTransferFrom(msg.sender, pair, amountToken);
-        IWETH(weth).deposit{value: amountETH}();
-        IERC20(weth).safeTransfer(pair, amountETH);
+        weth.deposit{value: amountETH}();
+        weth.safeTransfer(pair, amountETH);
         liquidity = IXYZSwapPair(pair).mint(to);
         // refund dust eth, if any
         if (msg.value > amountETH) {
@@ -140,13 +142,14 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function removeLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
+        address pair,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
         address to,
         uint256 deadline
     ) public override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
-        address pair = XYZSwapLibrary.pairFor(factory, tokenA, tokenB);
+        require(verifyPairAddress(tokenA, tokenB, pair), "XYZSwapRouter: INVALID_PAIR");
         IERC20(pair).safeTransferFrom(msg.sender, pair, liquidity); // send liquidity to pair
         (uint256 amount0, uint256 amount1) = IXYZSwapPair(pair).burn(to);
         (IERC20 token0, ) = XYZSwapLibrary.sortTokens(tokenA, tokenB);
@@ -157,6 +160,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     function removeLiquidityETH(
         IERC20 token,
+        address pair,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -165,7 +169,8 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     ) public override ensure(deadline) returns (uint256 amountToken, uint256 amountETH) {
         (amountToken, amountETH) = removeLiquidity(
             token,
-            IERC20(weth),
+            weth,
+            pair,
             liquidity,
             amountTokenMin,
             amountETHMin,
@@ -180,6 +185,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function removeLiquidityWithPermit(
         IERC20 tokenA,
         IERC20 tokenB,
+        address pair,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -190,12 +196,12 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         bytes32 r,
         bytes32 s
     ) external virtual override returns (uint256 amountA, uint256 amountB) {
-        address pair = XYZSwapLibrary.pairFor(factory, tokenA, tokenB);
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountA, amountB) = removeLiquidity(
             tokenA,
             tokenB,
+            pair,
             liquidity,
             amountAMin,
             amountBMin,
@@ -206,6 +212,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     function removeLiquidityETHWithPermit(
         IERC20 token,
+        address pair,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -216,11 +223,11 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         bytes32 r,
         bytes32 s
     ) external override returns (uint256 amountToken, uint256 amountETH) {
-        address pair = XYZSwapLibrary.pairFor(factory, token, IERC20(weth));
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountToken, amountETH) = removeLiquidityETH(
             token,
+            pair,
             liquidity,
             amountTokenMin,
             amountETHMin,
@@ -230,8 +237,10 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     }
 
     // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
+
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         IERC20 token,
+        address pair,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -240,7 +249,8 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     ) public override ensure(deadline) returns (uint256 amountETH) {
         (, amountETH) = removeLiquidity(
             token,
-            IERC20(weth),
+            weth,
+            pair,
             liquidity,
             amountTokenMin,
             amountETHMin,
@@ -254,6 +264,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
         IERC20 token,
+        address pair,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -264,11 +275,11 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         bytes32 r,
         bytes32 s
     ) external override returns (uint256 amountETH) {
-        address pair = XYZSwapLibrary.pairFor(factory, token, IERC20(weth));
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
             token,
+            pair,
             liquidity,
             amountTokenMin,
             amountETHMin,
@@ -281,6 +292,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     // requires the initial amount to have already been sent to the first pair
     function _swap(
         uint256[] memory amounts,
+        address[] memory pairsPath,
         IERC20[] memory path,
         address _to
     ) private {
@@ -291,84 +303,77 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOut)
                 : (amountOut, uint256(0));
-            address to = i < path.length - 2
-                ? XYZSwapLibrary.pairFor(factory, output, path[i + 2])
-                : _to;
-            address pair = XYZSwapLibrary.pairFor(factory, input, output);
-            IXYZSwapPair(pair).swap(amount0Out, amount1Out, to, new bytes(0));
+            address to = i < path.length - 2 ? pairsPath[i + 1] : _to;
+            IXYZSwapPair(pairsPath[i]).swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
 
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
+        address[] memory pairsPath,
         IERC20[] memory path,
         address to,
         uint256 deadline
-    ) public override payable ensure(deadline) returns (uint256[] memory amounts) {
-        amounts = XYZSwapLibrary.getAmountsOut(factory, amountIn, path);
+    ) public virtual override ensure(deadline) returns (uint256[] memory amounts) {
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
             "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amounts[0]
-        );
-        _swap(amounts, path, to);
+        IERC20(path[0]).safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, to);
     }
 
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
+        address[] memory pairsPath,
         IERC20[] memory path,
         address to,
         uint256 deadline
-    ) public override payable ensure(deadline) returns (uint256[] memory amounts) {
-        amounts = XYZSwapLibrary.getAmountsIn(factory, amountOut, path);
+    ) public override ensure(deadline) returns (uint256[] memory amounts) {
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= amountInMax, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amounts[0]
-        );
-        _swap(amounts, path, to);
+        path[0].safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, to);
     }
 
     function swapExactETHForTokens(
         uint256 amountOutMin,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override payable ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
-        amounts = XYZSwapLibrary.getAmountsOut(factory, msg.value, path);
+        require(path[0] == weth, "XYZSwapRouter: INVALID_PATH");
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsOut(msg.value, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
             "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
         IWETH(weth).deposit{value: amounts[0]}();
-        IERC20(weth).safeTransfer(XYZSwapLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
-        _swap(amounts, path, to);
+        weth.safeTransfer(pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, to);
     }
 
     function swapTokensForExactETH(
         uint256 amountOut,
         uint256 amountInMax,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
-        amounts = XYZSwapLibrary.getAmountsIn(factory, amountOut, path);
+        require(path[path.length - 1] == weth, "XYZSwapRouter: INVALID_PATH");
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= amountInMax, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amounts[0]
-        );
-        _swap(amounts, path, address(this));
+        path[0].safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, address(this));
         IWETH(weth).withdraw(amounts[amounts.length - 1]);
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
@@ -376,38 +381,38 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
-        amounts = XYZSwapLibrary.getAmountsOut(factory, amountIn, path);
+        require(path[path.length - 1] == weth, "XYZSwapRouter: INVALID_PATH");
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
             "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amounts[0]
-        );
-        _swap(amounts, path, address(this));
+        path[0].safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, address(this));
         IWETH(weth).withdraw(amounts[amounts.length - 1]);
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
 
     function swapETHForExactTokens(
         uint256 amountOut,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override payable ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
-        amounts = XYZSwapLibrary.getAmountsIn(factory, amountOut, path);
+        require(path[0] == weth, "XYZSwapRouter: INVALID_PATH");
+        veiryPairsPathSwap(pairsPath, path);
+        amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= msg.value, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
         IWETH(weth).deposit{value: amounts[0]}();
-        IERC20(weth).safeTransfer(XYZSwapLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
-        _swap(amounts, path, to);
+        weth.safeTransfer(pairsPath[0], amounts[0]);
+        _swap(amounts, pairsPath, path, to);
         // refund dust eth, if any
         if (msg.value > amounts[0]) {
             TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
@@ -416,33 +421,40 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     // **** SWAP (supporting fee-on-transfer tokens) ****
     // requires the initial amount to have already been sent to the first pair
-    function _swapSupportingFeeOnTransferTokens(IERC20[] memory path, address _to) internal {
+    function _swapSupportingFeeOnTransferTokens(
+        address[] memory pairsPath,
+        IERC20[] memory path,
+        address _to
+    ) internal {
+        veiryPairsPathSwap(pairsPath, path);
         for (uint256 i; i < path.length - 1; i++) {
             (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
             (IERC20 token0, ) = XYZSwapLibrary.sortTokens(input, output);
-            IXYZSwapPair pair = IXYZSwapPair(XYZSwapLibrary.pairFor(factory, input, output));
-            uint256 amountInput;
+            IXYZSwapPair pair = IXYZSwapPair(pairsPath[i]);
             uint256 amountOutput;
             {
                 // scope to avoid stack too deep errors
-                (uint256 reserve0, uint256 reserve1, uint256 fee) = pair.getTradeInfo();
-                (uint256 reserveInput, uint256 reserveOutput) = input == token0
-                    ? (reserve0, reserve1)
-                    : (reserve1, reserve0);
-                amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
+                (
+                    uint256 reserveIn,
+                    uint256 reserveOut,
+                    uint256 vReserveIn,
+                    uint256 vReserveOut,
+                    uint256 feeInPrecision
+                ) = XYZSwapLibrary.getTradeInfo(pairsPath[i], input, output);
+                uint256 amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveIn);
                 amountOutput = XYZSwapLibrary.getAmountOut(
                     amountInput,
-                    reserveInput,
-                    reserveOutput,
-                    fee
+                    reserveIn,
+                    reserveOut,
+                    vReserveIn,
+                    vReserveOut,
+                    feeInPrecision
                 );
             }
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOutput)
                 : (amountOutput, uint256(0));
-            address to = i < path.length - 2
-                ? XYZSwapLibrary.pairFor(factory, output, path[i + 2])
-                : _to;
+            address to = i < path.length - 2 ? pairsPath[i + 1] : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
@@ -450,17 +462,14 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
+        address[] memory pairsPath,
         IERC20[] memory path,
         address to,
         uint256 deadline
     ) public override ensure(deadline) {
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amountIn
-        );
+        path[0].safeTransferFrom(msg.sender, pairsPath[0], amountIn);
         uint256 balanceBefore = path[path.length - 1].balanceOf(to);
-        _swapSupportingFeeOnTransferTokens(path, to);
+        _swapSupportingFeeOnTransferTokens(pairsPath, path, to);
         uint256 balanceAfter = path[path.length - 1].balanceOf(to);
         require(
             balanceAfter >= balanceBefore.add(amountOutMin),
@@ -470,16 +479,17 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
 
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint256 amountOutMin,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override payable ensure(deadline) {
-        require(path[0] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
+        require(path[0] == weth, "XYZSwapRouter: INVALID_PATH");
         uint256 amountIn = msg.value;
         IWETH(weth).deposit{value: amountIn}();
-        IERC20(weth).safeTransfer(XYZSwapLibrary.pairFor(factory, path[0], path[1]), amountIn);
+        weth.safeTransfer(pairsPath[0], amountIn);
         uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
-        _swapSupportingFeeOnTransferTokens(path, to);
+        _swapSupportingFeeOnTransferTokens(pairsPath, path, to);
         require(
             path[path.length - 1].balanceOf(to).sub(balanceBefore) >= amountOutMin,
             "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT"
@@ -489,19 +499,16 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
+        address[] calldata pairsPath,
         IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external override ensure(deadline) {
-        require(path[path.length - 1] == IERC20(weth), "XYZSwapRouter: INVALID_PATH");
-        path[0].safeTransferFrom(
-            msg.sender,
-            XYZSwapLibrary.pairFor(factory, path[0], path[1]),
-            amountIn
-        );
-        _swapSupportingFeeOnTransferTokens(path, address(this));
+        require(path[path.length - 1] == weth, "XYZSwapRouter: INVALID_PATH");
+        path[0].safeTransferFrom(msg.sender, pairsPath[0], amountIn);
+        _swapSupportingFeeOnTransferTokens(pairsPath, path, address(this));
         uint256 amountOut = IWETH(weth).balanceOf(address(this));
-        require(amountOut >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amountOut >= amountOutMin, "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
@@ -517,41 +524,41 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         return XYZSwapLibrary.quote(amountA, reserveA, reserveB);
     }
 
-    /// @dev reserveIn, reserveOut and feeInPrecision are fetched by getTradeInfo API
-    function getAmountOut(
+    function getAmountsOut(
         uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut,
-        uint256 feeInPrecision
-    ) external override pure returns (uint256 amountOut) {
-        return XYZSwapLibrary.getAmountOut(amountIn, reserveIn, reserveOut, feeInPrecision);
+        address[] calldata pairsPath,
+        IERC20[] calldata path
+    ) external override view returns (uint256[] memory amounts) {
+        veiryPairsPathSwap(pairsPath, path);
+        return XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
     }
 
-    /// @dev reserveIn, reserveOut and feeInPrecision are fetched by getTradeInfo API
-    function getAmountIn(
+    function getAmountsIn(
         uint256 amountOut,
-        uint256 reserveIn,
-        uint256 reserveOut,
-        uint256 feeInPrecision
-    ) external override pure returns (uint256 amountIn) {
-        return XYZSwapLibrary.getAmountIn(amountOut, reserveIn, reserveOut, feeInPrecision);
+        address[] calldata pairsPath,
+        IERC20[] calldata path
+    ) external override view returns (uint256[] memory amounts) {
+        veiryPairsPathSwap(pairsPath, path);
+        return XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
     }
 
-    function getAmountsOut(uint256 amountIn, IERC20[] calldata path)
-        external
-        override
-        view
-        returns (uint256[] memory amounts)
-    {
-        return XYZSwapLibrary.getAmountsOut(factory, amountIn, path);
+    function veiryPairsPathSwap(address[] memory pairsPath, IERC20[] memory path) internal view {
+        require(path.length >= 2, "XYZSwapRouter: INVALID_PATH");
+        require(pairsPath.length == path.length - 1, "XYZSwapRouter: INVALID_PAIRS_PATH");
+        // IXYZSwapFactory _factory = IXYZSwapFactory(factory);
+        for (uint256 i = 0; i < pairsPath.length; i++) {
+            require(
+                IXYZSwapFactory(factory).isPair(path[i], path[i + 1], pairsPath[i]),
+                "XYZSwapRouter: INVALID_PAIR"
+            );
+        }
     }
 
-    function getAmountsIn(uint256 amountOut, IERC20[] calldata path)
-        external
-        override
-        view
-        returns (uint256[] memory amounts)
-    {
-        return XYZSwapLibrary.getAmountsIn(factory, amountOut, path);
+    function verifyPairAddress(
+        IERC20 tokenA,
+        IERC20 tokenB,
+        address pair
+    ) internal view returns (bool) {
+        return IXYZSwapFactory(factory).isPair(tokenA, tokenB, pair);
     }
 }
