@@ -38,7 +38,8 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 amount1In,
         uint256 amount0Out,
         uint256 amount1Out,
-        address indexed to
+        address indexed to,
+        uint256 feeInPrecision
     );
     event Sync(uint112 reserve0, uint112 reserve1);
 
@@ -114,6 +115,15 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
+    struct TradeInfo {
+        uint256 amount0In;
+        uint256 amount1In;
+        uint256 amount0Out;
+        uint256 amount1Out;
+        address to;
+        uint256 feeInPrecision;
+    }
+
     /// @dev this low-level function should be called from a contract
     ///             which performs important safety checks
     function swap(
@@ -128,6 +138,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             amount0Out < _reserve0 && amount1Out < _reserve1,
             "XYZSwap: INSUFFICIENT_LIQUIDITY"
         );
+        TradeInfo memory tradeInfo;
+        tradeInfo.amount0Out = amount0Out;
+        tradeInfo.amount1Out = amount1Out;
+        tradeInfo.to = to;
 
         uint256 balance0;
         uint256 balance1;
@@ -143,18 +157,36 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             balance0 = _token0.balanceOf(address(this));
             balance1 = _token1.balanceOf(address(this));
         }
-        uint256 amount0In = balance0 > _reserve0 - amount0Out
+        tradeInfo.amount0In = balance0 > _reserve0 - amount0Out
             ? balance0 - (_reserve0 - amount0Out)
             : 0;
-        uint256 amount1In = balance1 > _reserve1 - amount1Out
+        tradeInfo.amount1In = balance1 > _reserve1 - amount1Out
             ? balance1 - (_reserve1 - amount1Out)
             : 0;
-        require(amount0In > 0 || amount1In > 0, "XYZSwap: INSUFFICIENT_INPUT_AMOUNT");
+        require(
+            tradeInfo.amount0In > 0 || tradeInfo.amount1In > 0,
+            "XYZSwap: INSUFFICIENT_INPUT_AMOUNT"
+        );
 
-        verifyBalanceAndUpdateEma(amount0In, amount1In, _reserve0, _reserve1, balance0, balance1);
+        tradeInfo.feeInPrecision = verifyBalanceAndUpdateEma(
+            tradeInfo.amount0In,
+            tradeInfo.amount1In,
+            _reserve0,
+            _reserve1,
+            balance0,
+            balance1
+        );
 
         _update(balance0, balance1);
-        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+        emit Swap(
+            msg.sender,
+            tradeInfo.amount0In,
+            tradeInfo.amount1In,
+            tradeInfo.amount0Out,
+            tradeInfo.amount1Out,
+            tradeInfo.to,
+            tradeInfo.feeInPrecision
+        );
     }
 
     /// @dev force balances to match reserves
