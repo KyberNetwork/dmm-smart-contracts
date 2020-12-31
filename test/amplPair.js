@@ -45,17 +45,20 @@ contract('AmplificationPair', accounts => {
     Helper.assertEqual(await pair.balanceOf(lpUser), expectTotalSuppy.sub(new BN(1000)));
 
     const amountIn = expandTo18Decimals(20);
-    const amountOut = getAmountOut(expandTo18Decimals(200), expandTo18Decimals(2), amountIn);
+
+    let tradeInfo = await pair.getTradeInfo();
+    console.log(tradeInfo);
+    const amountOut = getAmountOut(expandTo18Decimals(200), expandTo18Decimals(2), amountIn, tradeInfo.feeInPrecision);
 
     await token1.transfer(pair.address, amountIn);
-    await expectRevert(pair.swap(amountOut.add(new BN(1)), new BN(0), user, '0x'), 'UniswapV2: K');
+    await expectRevert(pair.swap(amountOut.add(new BN(1)), new BN(0), user, '0x'), 'XYZSwap: K');
 
     let txResult = await pair.swap(amountOut, new BN(0), user, '0x');
     await expectEvent(txResult, 'Swap');
 
     await logBalance(pair.address);
-    let reserves = await pair.getReserves();
-    console.log(reserves._realReserve0.toString(), reserves._realReserve1.toString());
+    tradeInfo = await pair.getTradeInfo();
+    console.log(tradeInfo._rReserve0.toString(), tradeInfo._rReserve1.toString());
 
     const burnAmount = expectTotalSuppy.sub(new BN(1000));
     await pair.transfer(pair.address, burnAmount, {from: lpUser});
@@ -70,9 +73,9 @@ async function logBalance (user) {
   console.log(`token1: ${(await token1.balanceOf(user)).toString()}`);
 }
 
-function getAmountOut (reserveIn, reserveOut, amountIn) {
-  let amountInWithFee = amountIn.mul(new BN(997));
+function getAmountOut (reserveIn, reserveOut, amountIn, feeInPrecision) {
+  let amountInWithFee = amountIn.mul(Helper.precisionUnits.sub(feeInPrecision)).div(Helper.precisionUnits);
   let numerator = amountInWithFee.mul(reserveOut);
-  let denominator = reserveIn.mul(new BN(1000)).add(amountInWithFee);
+  let denominator = reserveIn.add(amountInWithFee);
   return numerator.div(denominator);
 }

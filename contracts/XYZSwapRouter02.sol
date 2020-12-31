@@ -501,7 +501,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint256 amountOut = IWETH(weth).balanceOf(address(this));
-        require(amountOut >= amountOutMin, "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amountOut >= amountOutMin, "XYZSwapRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }

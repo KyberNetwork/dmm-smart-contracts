@@ -22,7 +22,11 @@ contract AmplificationFactory {
         feeToSetter = _feeToSetter;
     }
 
-    function createPair(IERC20 tokenA, IERC20 tokenB, uint32 amplificationBps) external returns (address pair) {
+    function createPair(
+        IERC20 tokenA,
+        IERC20 tokenB,
+        uint32 amplificationBps
+    ) external returns (address pair) {
         require(tokenA != tokenB, "XYZSwap: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "XYZSwap: ZERO_ADDRESS");
