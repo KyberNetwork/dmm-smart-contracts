@@ -20,6 +20,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     using UQ112x112 for uint224;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
+    uint256 public constant MIN_TIME_ELASPED =  1 hours;
 
     address public factory;
     IERC20 public token0;
@@ -35,6 +36,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
     uint256 public price0CumulativeLast;
     uint256 public price1CumulativeLast;
+
+    uint256 public price0CumulativePreLast;
+    uint256 public price1CumulativePreLast;
+    uint32 public blockTimestampPreLast;
     /// @dev reserve0 * reserve1, as of immediately after the most recent liquidity event
     uint256 public kLast;
 
@@ -280,6 +285,11 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            if(timeElapsed > MIN_TIME_ELASPED && blockTimestampLast != 0) {
+                blockTimestampPreLast = blockTimestampLast;
+                price0CumulativePreLast = price0CumulativeLast;
+                price1CumulativePreLast = price1CumulativeLast;
+            }
             // * never overflows, and + overflow is desired
             price0CumulativeLast +=
                 uint256(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) *

@@ -2,7 +2,7 @@ const TestToken = artifacts.require('TestToken');
 const XYZSwapFactory = artifacts.require('XYZSwapFactory');
 const XYZSwapPair = artifacts.require('XYZSwapPair');
 
-const {expectEvent, expectRevert, constants} = require('@openzeppelin/test-helpers');
+const {expectEvent, expectRevert, constants, time} = require('@openzeppelin/test-helpers');
 const {assert} = require('chai');
 const BN = web3.utils.BN;
 
@@ -286,6 +286,10 @@ contract('XYZSwapPair', function (accounts) {
       tradeInfo.feeInPrecision
     );
     await pair.sync();
+    await time.increase(time.duration.hours(1));
+    await pair.sync();
+    await time.increase(time.duration.hours(1));
+
     await token1.transfer(pair.address, swapAmount);
     await token0.transfer(trader, new BN(1));
     console.log('-- swap --');
