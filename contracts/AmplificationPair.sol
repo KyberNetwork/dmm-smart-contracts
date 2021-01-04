@@ -183,7 +183,7 @@ contract AmplificationPair is ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
             : 0;
         newData.vReserve1 = data.vReserve1 + amount1In - amount1Out;
 
-        require(amount1In > 0 || amount1In > 0, "XYZSwap: INSUFFICIENT_INPUT_AMOUNT");
+        require(amount0In > 0 || amount1In > 0, "INSUFFICIENT_INPUT_AMOUNT");
         uint256 feeInPrecision = verifyBalanceAndUpdateEma(
             amount0In,
             amount1In,
@@ -236,6 +236,20 @@ contract AmplificationPair is ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
         _rReserve1 = rReserve1;
         uint256 rFactorInPrecision = getRFactor(block.number);
         feeInPrecision = FeeFomula.getFee(rFactorInPrecision);
+    }
+
+    function getReserves()
+        external
+        view
+        returns (
+            uint112 _reserve0,
+            uint112 _reserve1,
+            uint32 _blockTimestampLast
+        )
+    {
+        _reserve0 = rReserve0;
+        _reserve1 = rReserve1;
+        _blockTimestampLast = blockTimestampLast;
     }
 
     function verifyBalanceAndUpdateEma(

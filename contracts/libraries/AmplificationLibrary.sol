@@ -51,6 +51,27 @@ library AmplificationLibrary {
             : (vReserve1, vReserve0);
     }
 
+    function getReserves(
+        address pair,
+        IERC20 tokenA,
+        IERC20 tokenB
+    ) internal view returns (uint256 reserveA, uint256 reserveB) {
+        (IERC20 token0, ) = sortTokens(tokenA, tokenB);
+        (uint256 reserve0, uint256 reserve1, ) = IAmplificationPair(pair).getReserves();
+        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+    }
+
+    // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) internal pure returns (uint256 amountB) {
+        require(amountA > 0, "XYZSwapLibrary: INSUFFICIENT_AMOUNT");
+        require(reserveA > 0 && reserveB > 0, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
+        amountB = amountA.mul(reserveB) / reserveA;
+    }
+
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(
         uint256 amountIn,
@@ -60,14 +81,14 @@ library AmplificationLibrary {
         uint256 vReserveOut,
         uint256 feeInPrecision
     ) internal pure returns (uint256 amountOut) {
-        require(amountIn > 0, "XYZSwapLibrary: INSUFFICIENT_INPUT_AMOUNT");
-        require(rReserveIn > 0 && rReserveOut > 0, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
-        require(feeInPrecision < PRECISION, "XYZSwapLibrary: INVALID_FEE");
+        require(amountIn > 0, "AmplificationLibrary: INSUFFICIENT_INPUT_AMOUNT");
+        require(rReserveIn > 0 && rReserveOut > 0, "AmplificationLibrary: INSUFFICIENT_LIQUIDITY");
+        require(feeInPrecision < PRECISION, "AmplificationLibrary: INVALID_FEE");
         uint256 amountInWithFee = amountIn.mul(PRECISION - feeInPrecision).div(PRECISION);
         uint256 numerator = amountInWithFee.mul(vReserveOut);
         uint256 denominator = vReserveIn.add(amountInWithFee);
         amountOut = numerator.div(denominator);
-        require(amountOut <= rReserveOut, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
+        require(amountOut <= rReserveOut, "AmplificationLibrary: INSUFFICIENT_LIQUIDITY");
     }
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
@@ -79,12 +100,12 @@ library AmplificationLibrary {
         uint256 vReserveOut,
         uint256 feeInPrecision
     ) internal pure returns (uint256 amountIn) {
-        require(amountOut > 0, "XYZSwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amountOut > 0, "AmplificationLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
         require(
             rReserveIn > 0 && rReserveOut > amountOut,
-            "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY"
+            "AmplificationLibrary: INSUFFICIENT_LIQUIDITY"
         );
-        require(feeInPrecision < PRECISION, "XYZSwapLibrary: INVALID_FEE");
+        require(feeInPrecision < PRECISION, "AmplificationLibrary: INVALID_FEE");
         uint256 numerator = vReserveIn.mul(amountOut);
         uint256 denominator = vReserveOut.sub(amountOut);
         amountIn = numerator.div(denominator).add(1);

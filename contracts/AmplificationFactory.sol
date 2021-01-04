@@ -30,7 +30,7 @@ contract AmplificationFactory {
         require(tokenA != tokenB, "XYZSwap: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "XYZSwap: ZERO_ADDRESS");
-        require(getPair[token0][token1] == address(0), "XYZSwap: PAIR_EXISTS"); // single check is sufficient
+        // require(getPair[token0][token1] == address(0), "XYZSwap: PAIR_EXISTS"); // single check is sufficient
         bytes memory bytecode = type(AmplificationPair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
