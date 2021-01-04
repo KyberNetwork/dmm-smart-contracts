@@ -285,9 +285,10 @@ contract('XYZSwapPair', function (accounts) {
       token0Amount,
       tradeInfo.feeInPrecision
     );
+    await pair.sync();
     await token1.transfer(pair.address, swapAmount);
     await token0.transfer(trader, new BN(1));
-
+    console.log('-- swap --');
     const tx = await pair.swap(expectedOutputAmount, new BN(0), trader, '0x');
     // this number of uniswap is 73462
     console.log(`gas used: ${tx.receipt.gasUsed}`);

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./libraries/MathExt.sol";
 import "./libraries/FeeFomula.sol";
 import "./libraries/ERC20Permit.sol";
+import "./libraries/UQ112x112.sol";
 import "./interfaces/IXYZSwapPair.sol";
 import "./interfaces/IXYZSwapFactory.sol";
 import "./interfaces/IXYZSwapCallee.sol";
@@ -16,6 +17,7 @@ import "./VolumeTrendRecorder.sol";
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using UQ112x112 for uint224;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
 
@@ -27,6 +29,12 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     uint112 internal reserve0;
     uint112 internal reserve1;
     uint32 internal blockTimestampLast;
+
+    // uint public price0CumulativeLast2;
+    // uint public price1CumulativeLast2;
+
+    uint256 public price0CumulativeLast;
+    uint256 public price1CumulativeLast;
     /// @dev reserve0 * reserve1, as of immediately after the most recent liquidity event
     uint256 public kLast;
 
@@ -77,7 +85,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         require(liquidity > 0, "XYZSwap: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
 
-        _update(balance0, balance1);
+        _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint256(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
     }
@@ -110,7 +118,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         balance0 = _token0.balanceOf(address(this));
         balance1 = _token1.balanceOf(address(this));
 
-        _update(balance0, balance1);
+        _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint256(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
     }
@@ -133,7 +141,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         bytes calldata data
     ) external override nonReentrant {
         require(amount0Out > 0 || amount1Out > 0, "XYZSwap: INSUFFICIENT_OUTPUT_AMOUNT");
-        (uint256 _reserve0, uint256 _reserve1, ) = getReserves(); // gas savings
+        (uint112 _reserve0, uint112 _reserve1, ) = getReserves(); // gas savings
         require(
             amount0Out < _reserve0 && amount1Out < _reserve1,
             "XYZSwap: INSUFFICIENT_LIQUIDITY"
@@ -177,7 +185,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             balance1
         );
 
-        _update(balance0, balance1);
+        _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(
             msg.sender,
             tradeInfo.amount0In,
@@ -198,12 +206,13 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     /// @dev force reserves to match balances
     function sync() external nonReentrant {
         // in case of token like AMPL, we should also update EMA.
-        uint256 _reserve0 = reserve0;
+        uint112 _reserve0 = reserve0;
+        uint112 _reserve1 = reserve1;
         uint256 _newReserve0 = token0.balanceOf(address(this));
         shortEMA = safeUint128(uint256(shortEMA).mul(_newReserve0).div(_reserve0));
         longEMA = safeUint128(uint256(longEMA).mul(_newReserve0).div(_reserve0));
 
-        _update(_newReserve0, token1.balanceOf(address(this)));
+        _update(_newReserve0, token1.balanceOf(address(this)), _reserve0, _reserve1);
     }
 
     /// @dev returns data to calculate amountIn, amountOut
@@ -261,9 +270,24 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
-    function _update(uint256 balance0, uint256 balance1) internal {
+    function _update(
+        uint256 balance0,
+        uint256 balance1,
+        uint112 _reserve0,
+        uint112 _reserve1
+    ) internal {
         require(balance0 <= uint112(-1) && balance1 <= uint112(-1), "XYZSwap: OVERFLOW");
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            // * never overflows, and + overflow is desired
+            price0CumulativeLast +=
+                uint256(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) *
+                timeElapsed;
+            price1CumulativeLast +=
+                uint256(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) *
+                timeElapsed;
+        }
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
