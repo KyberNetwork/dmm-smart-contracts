@@ -18,3 +18,25 @@ module.exports.getFee = (totalSuppy, k, kLast) => {
   const rootKLast = Helper.sqrt(kLast);
   return totalSuppy.mul(rootK.sub(rootKLast)).div(rootK.mul(new BN(5)).add(rootKLast));
 };
+
+// get price range of token1 / token0
+module.exports.getPriceRange  = (tradeInfo) => {
+  let maxRate;
+  if (tradeInfo._reserve0.eq(tradeInfo._vReserve0)) {
+    maxRate = Infinity;
+  } else {
+    let limVReserve0 = tradeInfo._vReserve0.sub(tradeInfo._reserve0);
+    let limVReserve1 = tradeInfo._vReserve1.mul(tradeInfo._vReserve0).div(limVReserve0);
+    maxRate = limVReserve1.mul(Helper.precisionUnits).div(limVReserve0);
+  }
+
+  let minRate;
+  if (tradeInfo._reserve1.eq(tradeInfo._vReserve1)) {
+    minRate = new BN(0);
+  } else {
+    let limVReserve1 = tradeInfo._vReserve1.sub(tradeInfo._reserve1);
+    let limVReserve0 = tradeInfo._vReserve1.mul(tradeInfo._vReserve0).div(limVReserve1);
+    minRate = limVReserve1.mul(Helper.precisionUnits).div(limVReserve0);
+  }
+  return [minRate, maxRate];
+}

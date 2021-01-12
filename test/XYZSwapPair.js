@@ -38,11 +38,6 @@ contract('XYZSwapPair', function (accounts) {
     [token0, token1] = new BN(tokenA.address).lt(new BN(tokenB.address)) ? [tokenA, tokenB] : [tokenB, tokenA];
   });
 
-  // this test is for print bytecode hash for xyzSwapLibrary
-  it('print bytecode hash', async () => {
-    console.log(web3.utils.sha3(XYZSwapPair.bytecode));
-  });
-
   it('can not initialize not by factory', async () => {
     [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
     await expectRevert(pair.initialize(token0.address, token1.address, nonAmpBps, new BN(0)), 'XYZSwap: FORBIDDEN');
@@ -640,17 +635,25 @@ contract('XYZSwapPair', function (accounts) {
     });
   });
 
-  it.skip('sync', async () => {
-    const token0Amount = expandTo18Decimals(1000);
-    const token1Amount = expandTo18Decimals(1000);
-    await addLiquidity(liquidityProvider, token0Amount, token1Amount);
+  it.only('sync', async () => {
+    [factory, pair] = await setupPair(admin, token0, token1, ampBps, Helper.Q112);
 
-    token0.transfer(pair.address, expandTo18Decimals(1));
-    await pair.sync();
+    const token0Amount = expandTo18Decimals(1);
+    const token1Amount = expandTo18Decimals(1);
+    await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
 
-    let reserves = await pair.getReserves();
-    Helper.assertEqual(reserves._reserve0, expandTo18Decimals(1001));
-    Helper.assertEqual(reserves._reserve1, expandTo18Decimals(1000));
+    let tradeInfo = await pair.getTradeInfo();
+    let priceRange = XyzHelper.getPriceRange(tradeInfo);
+    console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+
+    await token0.transfer(pair.address, expandTo18Decimals(1));
+    // await token1.transfer(pair.address, new BN(1));
+    await pair.transfer(pair.address, expandTo18Decimals(1).sub(MINIMUM_LIQUIDITY), {from: liquidityProvider});  
+    await pair.burn(liquidityProvider);
+
+    tradeInfo = await pair.getTradeInfo();
+    priceRange = XyzHelper.getPriceRange(tradeInfo);
+    console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
   });
 
   it.skip('skim', async () => {

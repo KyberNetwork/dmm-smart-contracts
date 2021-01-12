@@ -74,7 +74,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint224 _baseRate
     ) external override {
         require(msg.sender == factory, "XYZSwap: FORBIDDEN"); // sufficient check
-        require(_ampBps >= 10000, "XYZSwap: invalid _ampBps");
+        require(_ampBps >= BPS, "XYZSwap: INVALID_BPS");
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
@@ -85,11 +85,11 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     ///                 which performs important safety checks
     function mint(address to) external override nonReentrant returns (uint256 liquidity) {
         (bool isAmpPool, ReserveData memory data) = getReservesData();
-        ReserveData memory _newdata;
-        _newdata.reserve0 = token0.balanceOf(address(this));
-        _newdata.reserve1 = token1.balanceOf(address(this));
-        uint256 amount0 = _newdata.reserve0.sub(data.reserve0);
-        uint256 amount1 = _newdata.reserve1.sub(data.reserve1);
+        ReserveData memory _data;
+        _data.reserve0 = token0.balanceOf(address(this));
+        _data.reserve1 = token1.balanceOf(address(this));
+        uint256 amount0 = _data.reserve0.sub(data.reserve0);
+        uint256 amount1 = _data.reserve1.sub(data.reserve1);
 
         bool feeOn = _mintFee(isAmpPool, data);
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
@@ -97,33 +97,33 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             if (isAmpPool) {
                 uint32 _ampBps = ampBps;
                 uint224 _baseRate = baseRate;
-                uint224 reserveRate = UQ112x112.encode(safeUint112(_newdata.reserve1)).uqdiv(
-                    safeUint112(_newdata.reserve0)
+                uint224 reserveRate = UQ112x112.encode(safeUint112(_data.reserve1)).uqdiv(
+                    safeUint112(_data.reserve0)
                 );
                 uint224 delta = (reserveRate >= _baseRate)
                     ? reserveRate - _baseRate
                     : _baseRate - reserveRate;
                 require(uint256(delta).mul(BPS).div(uint256(_baseRate)) == 0, "invalid init rate");
-                _newdata.vReserve0 = _newdata.reserve0.mul(_ampBps) / BPS;
-                _newdata.vReserve1 = _newdata.reserve1.mul(_ampBps) / BPS;
+                _data.vReserve0 = _data.reserve0.mul(_ampBps) / BPS;
+                _data.vReserve1 = _data.reserve1.mul(_ampBps) / BPS;
             }
             liquidity = MathExt.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
             _mint(address(-1), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            if (isAmpPool) {
-                _newdata.vReserve0 = data.vReserve0.mul(_newdata.reserve0).div(data.reserve0);
-                _newdata.vReserve1 = data.vReserve1.mul(_newdata.reserve1).div(data.reserve1);
-            }
             liquidity = Math.min(
                 amount0.mul(_totalSupply) / data.reserve0,
                 amount1.mul(_totalSupply) / data.reserve1
             );
+            if (isAmpPool) {
+                _data.vReserve0 = data.vReserve0.mul(liquidity.add(_totalSupply)) / _totalSupply;
+                _data.vReserve1 = data.vReserve1.mul(liquidity.add(_totalSupply)) / _totalSupply;
+            }
         }
         require(liquidity > 0, "XYZSwap: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
 
-        _update(isAmpPool, _newdata);
-        if (feeOn) kLast = getK(isAmpPool, _newdata);
+        _update(isAmpPool, _data);
+        if (feeOn) kLast = getK(isAmpPool, _data);
         emit Mint(msg.sender, amount0, amount1);
     }
 
@@ -142,7 +142,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
         uint256 balance0 = _token0.balanceOf(address(this));
         uint256 balance1 = _token1.balanceOf(address(this));
-        //TODO: may be we need to check if balance0 and balance1 match with virtual balances.
+        require(
+            balance0 >= data.reserve0 && balance1 >= data.reserve1,
+            "XYZSwap: UNSYNC_RESERVES"
+        );
         uint256 liquidity = balanceOf(address(this));
 
         bool feeOn = _mintFee(isAmpPool, data);
@@ -155,7 +158,6 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         _token1.safeTransfer(to, amount1);
         data.reserve0 = _token0.balanceOf(address(this));
         data.reserve1 = _token1.balanceOf(address(this));
-
         if (isAmpPool) {
             data.vReserve0 = data.vReserve0.mul(_totalSupply.sub(liquidity)) / _totalSupply;
             data.vReserve1 = data.vReserve1.mul(_totalSupply.sub(liquidity)) / _totalSupply;
@@ -226,17 +228,20 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     /// @dev force reserves to match balances
     function sync() external nonReentrant {
         (bool isAmpPool, ReserveData memory data) = getReservesData();
-        uint256 newBalance0 = IERC20(token0).balanceOf(address(this));
-        uint256 newBalance1 = IERC20(token1).balanceOf(address(this));
+        ReserveData memory newData;
+        newData.reserve0 = IERC20(token0).balanceOf(address(this));
+        newData.reserve1 = IERC20(token1).balanceOf(address(this));
         // update virtual reserves if this is amp pool.
         if (isAmpPool) {
-            data.vReserve0 = newBalance0.mul(data.vReserve0).div(data.reserve0);
-            data.vReserve1 = newBalance1.mul(data.vReserve1).div(data.reserve1);
+            uint256 _totalSupply = totalSupply();
+            uint256 b = Math.min(
+                newData.reserve0.mul(_totalSupply) / data.reserve0,
+                newData.reserve1.mul(_totalSupply) / data.reserve1
+            );
+            newData.vReserve0 = data.vReserve0.mul(_totalSupply.add(b)) / _totalSupply;
+            newData.vReserve1 = data.vReserve1.mul(_totalSupply.add(b)) / _totalSupply;
         }
-        data.reserve0 = newBalance0;
-        data.reserve1 = newBalance1;
-
-        _update(isAmpPool, data);
+        _update(isAmpPool, newData);
     }
 
     /// @dev returns data to calculate amountIn, amountOut
@@ -321,7 +326,6 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             vReserve0 = safeUint112(data.vReserve0);
             vReserve1 = safeUint112(data.vReserve1);
         }
-        /// TODO: for non-amp on the first call per block, price accumulators
         emit Sync(data.vReserve0, data.vReserve1, data.reserve0, data.reserve1);
     }
 
@@ -336,6 +340,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                 uint256 rootKLast = MathExt.sqrt(_kLast);
                 if (rootK > rootKLast) {
                     uint256 numerator = totalSupply().mul(rootK.sub(rootKLast));
+                    /// TODO: later change this configuration
                     uint256 denominator = rootK.mul(5).add(rootKLast);
                     uint256 liquidity = numerator / denominator;
                     if (liquidity > 0) _mint(feeTo, liquidity);
@@ -362,7 +367,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     }
 
     function safeUint112(uint256 x) internal pure returns (uint112) {
-        require(x <= MAX_UINT112, "XYZSwap: Overflow uint112");
+        require(x <= MAX_UINT112, "XYZSwap: OVERFLOW");
         return uint112(x);
     }
 }

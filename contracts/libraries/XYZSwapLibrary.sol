@@ -38,16 +38,15 @@ library XYZSwapLibrary {
         )
     {
         (IERC20 token0, ) = sortTokens(tokenA, tokenB);
-        uint256 rReserve0;
-        uint256 rReserve1;
+        uint256 reserve0;
+        uint256 reserve1;
         uint256 vReserve0;
         uint256 vReserve1;
-        (rReserve0, rReserve1, vReserve0, vReserve1, feeInPrecision) = IXYZSwapPair(pair)
+        (reserve0, reserve1, vReserve0, vReserve1, feeInPrecision) = IXYZSwapPair(pair)
             .getTradeInfo();
-        (reserveA, reserveB) = tokenA == token0 ? (rReserve0, rReserve1) : (rReserve1, rReserve0);
-        (vReserveA, vReserveB) = tokenA == token0
-            ? (vReserve0, vReserve1)
-            : (vReserve1, vReserve0);
+        (reserveA, reserveB, vReserveA, vReserveB) = tokenA == token0
+            ? (reserve0, reserve1, vReserve0, vReserve1)
+            : (reserve1, reserve0, vReserve1, vReserve0);
     }
 
     /// @dev fetches the reserves for a pair, used for liquidity adding

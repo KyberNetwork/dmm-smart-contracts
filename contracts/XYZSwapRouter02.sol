@@ -44,9 +44,9 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         uint256 amountAMin,
         uint256 amountBMin
     ) internal virtual view returns (uint256 amountA, uint256 amountB) {
-        require(pair != address(0), "invalid pair address");
         (uint256 reserveA, uint256 reserveB) = XYZSwapLibrary.getReserves(pair, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
+            //TODO: did we check the base price here
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
             uint256 amountBOptimal = XYZSwapLibrary.quote(amountADesired, reserveA, reserveB);

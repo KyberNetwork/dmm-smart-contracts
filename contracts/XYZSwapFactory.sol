@@ -32,11 +32,11 @@ contract XYZSwapFactory is IXYZSwapFactory {
         IERC20 tokenB,
         uint32 ampBps,
         uint224 baseRate
-    ) external override returns (address) {
+    ) external override returns (address pair) {
         require(tokenA != tokenB, "XYZSwap: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "XYZSwap: ZERO_ADDRESS");
-        address pair = address(new XYZSwapPair());
+        pair = address(new XYZSwapPair());
         XYZSwapPair(pair).initialize(token0, token1, ampBps, baseRate);
         tokenPairs[token0][token1].add(pair);
         tokenPairs[token1][token0].add(pair);

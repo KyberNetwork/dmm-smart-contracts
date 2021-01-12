@@ -47,9 +47,7 @@ contract ExampleFlashSwap is IXYZSwapCallee {
             // scope for token{0,1}, avoids stack too deep errors
             IERC20 token0 = IXYZSwapPairExtended(msg.sender).token0();
             IERC20 token1 = IXYZSwapPairExtended(msg.sender).token1();
-            // TODO ensure that msg.sender is actually a V2 pair
-            // assert(msg.sender == XYZSwapLibrary.pairFor(factory, token0, token1));
-            require(IXYZSwapFactory(factory).isPair(token0, token1, msg.sender), "invalid pair");
+            assert(IXYZSwapFactory(factory).isPair(token0, token1, msg.sender));
             assert(amount0 == 0 || amount1 == 0); // this strategy is unidirectional
             path[0] = amount0 == 0 ? token0 : token1;
             path[1] = amount0 == 0 ? token1 : token0;
