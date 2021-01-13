@@ -40,7 +40,7 @@ contract('XYZSwapRouter02', accounts => {
     factory = await XYZSwapFactory.new(feeSetter);
     router = await XYZSwapRouter02.new(factory.address, weth.address);
     // make a DTT<>WETH pair
-    await factory.createPair(feeToken.address, weth.address, new BN(10000), new BN(0));
+    await factory.createPair(feeToken.address, weth.address, new BN(10000));
     const pairAddresses = await factory.getPairs(feeToken.address, weth.address);
     pair = await XYZSwapPair.at(pairAddresses[0]);
   });
@@ -169,7 +169,7 @@ contract('XYZSwapRouter02', accounts => {
     const feeToken2 = await FeeToken.new('feeOnTransfer Token2', 'FOT2', expandTo18Decimals(100000));
 
     /// create pair
-    await factory.createPair(feeToken.address, feeToken2.address, new BN(10000), new BN(0));
+    await factory.createPair(feeToken.address, feeToken2.address, new BN(10000));
     const pairAddresses = await factory.getPairs(feeToken.address, feeToken2.address);
     tokenPair = await XYZSwapPair.at(pairAddresses[0]);
 

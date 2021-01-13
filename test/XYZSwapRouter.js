@@ -46,7 +46,7 @@ contract('XYZSwapRouter', function (accounts) {
     tokenA.transfer(trader, initTokenAmount);
     tokenB.transfer(trader, initTokenAmount);
 
-    await factory.createPair(tokenA.address, tokenB.address, new BN(10000), new BN(0));
+    await factory.createPair(tokenA.address, tokenB.address, new BN(10000));
     const pairAddrs = await factory.getPairs(tokenA.address, tokenB.address);
     pair = await XYZSwapPair.at(pairAddrs[0]);
 
@@ -57,7 +57,7 @@ contract('XYZSwapRouter', function (accounts) {
     ethPartner = await TestToken.new('WETH Partner', 'WETH-P', Helper.expandTo18Decimals(10000));
     weth = await WETH.new();
     await ethPartner.transfer(trader, initTokenAmount);
-    await factory.createPair(weth.address, ethPartner.address, new BN(10000), new BN(0));
+    await factory.createPair(weth.address, ethPartner.address, new BN(10000));
     const wethPairAddresses = await factory.getPairs(weth.address, ethPartner.address);
     ethPair = await XYZSwapPair.at(wethPairAddresses[0]);
 
@@ -69,248 +69,348 @@ contract('XYZSwapRouter', function (accounts) {
     Helper.assertEqual(await router.weth(), weth.address);
   });
 
-  it.skip('addLiquidity with pair is not created', async () => {
-    let tokenA = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(10000));
-    let tokenB = await TestToken.new('test token B', 'B', Helper.expandTo18Decimals(10000));
-    tokenA.transfer(trader, initTokenAmount);
-    tokenB.transfer(trader, initTokenAmount);
+  describe('addLiquidity', async () => {
+    it('addLiquidityNewPool', async () => {
+      let tokenA = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(10000));
+      let tokenB = await TestToken.new('test token B', 'B', Helper.expandTo18Decimals(10000));
+      tokenA.transfer(trader, initTokenAmount);
+      tokenB.transfer(trader, initTokenAmount);
 
-    await token0.approve(router.address, bigAmount, {from: trader});
-    await token1.approve(router.address, bigAmount, {from: trader});
+      await tokenA.approve(router.address, bigAmount, {from: trader});
+      await tokenB.approve(router.address, bigAmount, {from: trader});
 
-    const token0Amount = Helper.expandTo18Decimals(1);
-    const token1Amount = Helper.expandTo18Decimals(4);
+      const tokenAAmount = Helper.expandTo18Decimals(1);
+      const tokenBAmount = Helper.expandTo18Decimals(4);
+      // amp-pool
+      let result = await router.addLiquidityNewPool(
+        tokenA.address,
+        tokenB.address,
+        new BN(20000),
+        tokenAAmount,
+        tokenBAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader}
+      );
+      let pairAddresses = await factory.getPairs(tokenA.address, tokenB.address);
+      let pair = await XYZSwapPair.at(pairAddresses[0]);
+      const token0Address = await pair.token0();
+      console.log('gas used', result.receipt.gasUsed);
+      await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+        reserve0: tokenA.address == token0Address ? tokenAAmount : tokenBAmount,
+        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount
+      });
+      const expectedLiquidity = Helper.sqrt(tokenAAmount.mul(tokenBAmount)).sub(MINIMUM_LIQUIDITY);
+      Helper.assertEqual(await pair.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
 
-    let result = await router.addLiquidity(
-      token0.address,
-      token1.address,
-      token0Amount,
-      token1Amount,
-      0,
-      0,
-      trader,
-      bigAmount,
-      {from: trader}
-    );
-    console.log('gas used', result.receipt.gasUsed);
-    await expectEvent.inTransaction(result.tx, pair, 'Sync', {
-      reserve0: token0Amount,
-      reserve1: token1Amount
+      // non-amp pool
+      result = await router.addLiquidityNewPool(
+        tokenB.address,
+        tokenA.address,
+        new BN(10000),
+        tokenBAmount,
+        tokenAAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader}
+      );
+      pairAddresses = await factory.getPairs(tokenA.address, tokenB.address);
+      pair = await XYZSwapPair.at(pairAddresses[1]);
+      await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+        reserve0: tokenA.address == token0Address ? tokenAAmount : tokenBAmount,
+        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount
+      });
+      Helper.assertEqual(await pair.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
+      // addliquidity for non-amp again
+      result = await router.addLiquidityNewPool(
+        tokenB.address,
+        tokenA.address,
+        new BN(10000),
+        tokenBAmount,
+        tokenAAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader}
+      );
+      pairAddresses = await factory.getPairs(tokenA.address, tokenB.address);
+      Helper.assertEqual(pairAddresses.length, 2);
     });
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: token0Amount,
-      amount1: token1Amount
+
+    it('addLiquidityNewPoolETH', async () => {
+      let token = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(10000));
+      token.transfer(trader, initTokenAmount);
+
+      await token.approve(router.address, bigAmount, {from: trader});
+
+      const tokenAmount = Helper.expandTo18Decimals(1);
+      const ethAmount = Helper.expandTo18Decimals(4);
+      // amp-pool
+      let result = await router.addLiquidityNewPoolETH(
+        token.address,
+        new BN(20000),
+        tokenAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader, value: ethAmount}
+      );
+      let pairAddresses = await factory.getPairs(token.address, weth.address);
+      let pair = await XYZSwapPair.at(pairAddresses[0]);
+      const token0Address = await pair.token0();
+      console.log('gas used', result.receipt.gasUsed);
+      await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+        reserve0: token.address == token0Address ? tokenAmount : ethAmount,
+        reserve1: token.address == token0Address ? ethAmount : tokenAmount
+      });
+      const expectedLiquidity = Helper.sqrt(tokenAmount.mul(ethAmount)).sub(MINIMUM_LIQUIDITY);
+      Helper.assertEqual(await pair.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
+
+      // non-amp pool
+      result = await router.addLiquidityNewPoolETH(
+        token.address,
+        new BN(10000),
+        tokenAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader, value: ethAmount}
+      );
+      pairAddresses = await factory.getPairs(token.address, weth.address);
+      pair = await XYZSwapPair.at(pairAddresses[1]);
+      await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+        reserve0: token.address == token0Address ? tokenAmount : ethAmount,
+        reserve1: token.address == token0Address ? ethAmount : tokenAmount
+      });
+      Helper.assertEqual(await pair.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
+      // addliquidity for non-amp again
+      result = await router.addLiquidityNewPoolETH(
+        token.address,
+        new BN(10000),
+        tokenAmount,
+        0,
+        0,
+        liquidityProvider,
+        bigAmount,
+        {from: trader, value: ethAmount}
+      );
+      pairAddresses = await factory.getPairs(token.address, weth.address);
+      Helper.assertEqual(pairAddresses.length, 2);
     });
-  });
 
-  it('addLiquidity', async () => {
-    const token0Amount = Helper.expandTo18Decimals(1);
-    const token1Amount = Helper.expandTo18Decimals(4);
+    it('addLiquidity', async () => {
+      const token0Amount = Helper.expandTo18Decimals(1);
+      const token1Amount = Helper.expandTo18Decimals(4);
 
-    let expectedLiquidity = Helper.expandTo18Decimals(2);
+      await token0.approve(router.address, bigAmount, {from: trader});
+      await token1.approve(router.address, bigAmount, {from: trader});
+      // add liquidity to a pair without any reserves
+      let result = await router.addLiquidity(
+        token0.address,
+        token1.address,
+        pair.address,
+        token0Amount,
+        token1Amount,
+        0,
+        0,
+        trader,
+        bigAmount,
+        {from: trader}
+      );
+      console.log('gas used', result.receipt.gasUsed);
+      await expectEvent.inTransaction(result.tx, pair, 'Sync', {
+        reserve0: token0Amount,
+        reserve1: token1Amount
+      });
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: token0Amount,
+        amount1: token1Amount
+      });
+      // when call add Liquidity, the router will add token to the pool with the current ratio
+      let updateAmount = Helper.expandTo18Decimals(2);
+      let expectedToken0Amount = Helper.expandTo18Decimals(1).div(new BN(2));
+      Helper.assertEqual(await router.quote(updateAmount, token1Amount, token0Amount), expectedToken0Amount);
 
-    await token0.approve(router.address, bigAmount, {from: trader});
-    await token1.approve(router.address, bigAmount, {from: trader});
+      await expectRevert(
+        router.addLiquidity(
+          token0.address,
+          token1.address,
+          pair.address,
+          Helper.expandTo18Decimals(2),
+          Helper.expandTo18Decimals(2),
+          expectedToken0Amount.add(new BN(1)),
+          0,
+          trader,
+          bigAmount,
+          {from: trader}
+        ),
+        'XYZSwapRouter: INSUFFICIENT_A_AMOUNT'
+      );
 
-    let result = await router.addLiquidity(
-      token0.address,
-      token1.address,
-      pair.address,
-      token0Amount,
-      token1Amount,
-      0,
-      0,
-      trader,
-      bigAmount,
-      {from: trader}
-    );
-    console.log('gas used', result.receipt.gasUsed);
-    await expectEvent.inTransaction(result.tx, pair, 'Sync', {
-      reserve0: token0Amount,
-      reserve1: token1Amount
-    });
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: token0Amount,
-      amount1: token1Amount
-    });
-    // when call add Liquidity, the router will add token to the pool with the current ratio
-    let updateAmount = Helper.expandTo18Decimals(2);
-    let expectedToken0Amount = Helper.expandTo18Decimals(1).div(new BN(2));
-    Helper.assertEqual(await router.quote(updateAmount, token1Amount, token0Amount), expectedToken0Amount);
+      await expectRevert(
+        router.addLiquidity(
+          token1.address,
+          token0.address,
+          pair.address,
+          Helper.expandTo18Decimals(2),
+          Helper.expandTo18Decimals(2),
+          0,
+          expectedToken0Amount.add(new BN(1)),
+          trader,
+          bigAmount,
+          {from: trader}
+        ),
+        'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
+      );
 
-    await expectRevert(
-      router.addLiquidity(
+      result = await router.addLiquidity(
         token0.address,
         token1.address,
         pair.address,
         Helper.expandTo18Decimals(2),
         Helper.expandTo18Decimals(2),
-        expectedToken0Amount.add(new BN(1)),
+        0,
         0,
         trader,
         bigAmount,
         {from: trader}
-      ),
-      'XYZSwapRouter: INSUFFICIENT_A_AMOUNT'
-    );
+      );
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: expectedToken0Amount,
+        amount1: updateAmount
+      });
 
-    await expectRevert(
-      router.addLiquidity(
-        token1.address,
-        token0.address,
-        pair.address,
-        Helper.expandTo18Decimals(2),
-        Helper.expandTo18Decimals(2),
-        0,
-        expectedToken0Amount.add(new BN(1)),
-        trader,
-        bigAmount,
-        {from: trader}
-      ),
-      'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
-    );
+      // similar test with token 1
+      updateAmount = Helper.expandTo18Decimals(1);
+      let expectedToken1Amount = Helper.expandTo18Decimals(4);
+      Helper.assertEqual(await router.quote(updateAmount, token0Amount, token1Amount), expectedToken1Amount);
+      await expectRevert(
+        router.addLiquidity(
+          token0.address,
+          token1.address,
+          pair.address,
+          updateAmount,
+          Helper.expandTo18Decimals(5),
+          0,
+          expectedToken1Amount.add(new BN(1)),
+          trader,
+          bigAmount,
+          {from: trader}
+        ),
+        'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
+      );
 
-    result = await router.addLiquidity(
-      token0.address,
-      token1.address,
-      pair.address,
-      Helper.expandTo18Decimals(2),
-      Helper.expandTo18Decimals(2),
-      0,
-      0,
-      trader,
-      bigAmount,
-      {from: trader}
-    );
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: expectedToken0Amount,
-      amount1: updateAmount
-    });
+      await expectRevert(
+        router.addLiquidity(
+          token1.address,
+          token0.address,
+          pair.address,
+          Helper.expandTo18Decimals(5),
+          updateAmount,
+          expectedToken1Amount.add(new BN(1)),
+          0,
+          trader,
+          bigAmount,
+          {from: trader}
+        ),
+        'XYZSwapRouter: INSUFFICIENT_A_AMOUNT'
+      );
 
-    // similar test with token 1
-    updateAmount = Helper.expandTo18Decimals(1);
-    let expectedToken1Amount = Helper.expandTo18Decimals(4);
-    Helper.assertEqual(await router.quote(updateAmount, token0Amount, token1Amount), expectedToken1Amount);
-    await expectRevert(
-      router.addLiquidity(
+      result = await router.addLiquidity(
         token0.address,
         token1.address,
         pair.address,
         updateAmount,
         Helper.expandTo18Decimals(5),
         0,
-        expectedToken1Amount.add(new BN(1)),
-        trader,
-        bigAmount,
-        {from: trader}
-      ),
-      'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
-    );
-
-    await expectRevert(
-      router.addLiquidity(
-        token1.address,
-        token0.address,
-        pair.address,
-        Helper.expandTo18Decimals(5),
-        updateAmount,
-        expectedToken1Amount.add(new BN(1)),
         0,
         trader,
         bigAmount,
         {from: trader}
-      ),
-      'XYZSwapRouter: INSUFFICIENT_A_AMOUNT'
-    );
-
-    result = await router.addLiquidity(
-      token0.address,
-      token1.address,
-      pair.address,
-      updateAmount,
-      Helper.expandTo18Decimals(5),
-      0,
-      0,
-      trader,
-      bigAmount,
-      {from: trader}
-    );
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: updateAmount,
-      amount1: expectedToken1Amount
+      );
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: updateAmount,
+        amount1: expectedToken1Amount
+      });
     });
-  });
 
-  it('addLiquidityETH', async () => {
-    const ethPartnerAmount = Helper.expandTo18Decimals(1);
-    const ethAmount = Helper.expandTo18Decimals(4);
+    it('addLiquidityETH', async () => {
+      const ethPartnerAmount = Helper.expandTo18Decimals(1);
+      const ethAmount = Helper.expandTo18Decimals(4);
 
-    const expectedLiquidity = Helper.expandTo18Decimals(2);
-    const ethPairToken0 = await ethPair.token0();
-    await ethPartner.approve(router.address, bigAmount, {from: trader});
+      const expectedLiquidity = Helper.expandTo18Decimals(2);
+      const ethPairToken0 = await ethPair.token0();
+      await ethPartner.approve(router.address, bigAmount, {from: trader});
 
-    let result = await router.addLiquidityETH(
-      ethPartner.address,
-      ethPair.address,
-      ethPartnerAmount,
-      ethPartnerAmount,
-      ethAmount,
-      trader,
-      bigAmount,
-      {from: trader, value: ethAmount}
-    );
-    console.log('addLiquidityETH 1st time: gas used', result.receipt.gasUsed);
-    await expectEvent.inTransaction(result.tx, ethPair, 'Sync', {
-      reserve0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      reserve1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      let result = await router.addLiquidityETH(
+        ethPartner.address,
+        ethPair.address,
+        ethPartnerAmount,
+        ethPartnerAmount,
+        ethAmount,
+        trader,
+        bigAmount,
+        {from: trader, value: ethAmount}
+      );
+      console.log('addLiquidityETH 1st time: gas used', result.receipt.gasUsed);
+      await expectEvent.inTransaction(result.tx, ethPair, 'Sync', {
+        reserve0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
+        reserve1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      });
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
+        amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      });
+      Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.sub(MINIMUM_LIQUIDITY));
+
+      // test add Liquidity with extra ETH should return to sender
+      result = await router.addLiquidityETH(
+        ethPartner.address,
+        ethPair.address,
+        ethPartnerAmount,
+        ethPartnerAmount,
+        ethAmount,
+        trader,
+        bigAmount,
+        {from: trader, value: ethAmount.add(new BN(100))}
+      );
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
+        amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      });
+      Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.mul(new BN(2)).sub(MINIMUM_LIQUIDITY));
+
+      // test add Liquidity with extra token
+      result = await router.addLiquidityETH(
+        ethPartner.address,
+        ethPair.address,
+        ethPartnerAmount.add(new BN(500)),
+        ethPartnerAmount,
+        ethAmount,
+        trader,
+        bigAmount,
+        {from: trader, value: ethAmount}
+      );
+      console.log('addLiquidityETH 2nd time: gas used', result.receipt.gasUsed);
+      await expectEvent.inTransaction(result.tx, pair, 'Mint', {
+        sender: router.address,
+        amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
+        amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      });
+      Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.mul(new BN(3)).sub(MINIMUM_LIQUIDITY));
     });
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
-    });
-    Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.sub(MINIMUM_LIQUIDITY));
-
-    // test add Liquidity with extra ETH should return to sender
-    result = await router.addLiquidityETH(
-      ethPartner.address,
-      ethPair.address,
-      ethPartnerAmount,
-      ethPartnerAmount,
-      ethAmount,
-      trader,
-      bigAmount,
-      {from: trader, value: ethAmount.add(new BN(100))}
-    );
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
-    });
-    Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.mul(new BN(2)).sub(MINIMUM_LIQUIDITY));
-
-    // test add Liquidity with extra token
-    result = await router.addLiquidityETH(
-      ethPartner.address,
-      ethPair.address,
-      ethPartnerAmount.add(new BN(500)),
-      ethPartnerAmount,
-      ethAmount,
-      trader,
-      bigAmount,
-      {from: trader, value: ethAmount}
-    );
-    console.log('addLiquidityETH 2nd time: gas used', result.receipt.gasUsed);
-    await expectEvent.inTransaction(result.tx, pair, 'Mint', {
-      sender: router.address,
-      amount0: ethPairToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      amount1: ethPairToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
-    });
-    Helper.assertEqual(await ethPair.balanceOf(trader), expectedLiquidity.mul(new BN(3)).sub(MINIMUM_LIQUIDITY));
   });
 
   it('removeLiquidity', async () => {

@@ -37,7 +37,7 @@ contract('ExampleFlashSwap', accounts => {
     flashSwap = await ExampleFlashSwap.new(uniswapRouter.address, xyzFactory.address);
 
     // await ethPartner.transfer(trader, initTokenAmount);
-    await xyzFactory.createPair(weth.address, ethPartner.address, new BN(10000), new BN(0));
+    await xyzFactory.createPair(weth.address, ethPartner.address, new BN(10000));
     const ethPairAddress = await xyzFactory.getPairs(weth.address, ethPartner.address);
     ethXyzPair = await XYZSwapPair.at(ethPairAddress[0]);
   });

@@ -8,10 +8,13 @@ import "./XYZSwapPair.sol";
 contract XYZSwapFactory is IXYZSwapFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    uint256 internal constant BPS = 10000;
+
     address public override feeTo;
     address public override feeToSetter;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPairs;
+    mapping(IERC20 => mapping(IERC20 => address)) public override getNonAmpPair;
     address[] public override allPairs;
 
     event PairCreated(
@@ -19,7 +22,6 @@ contract XYZSwapFactory is IXYZSwapFactory {
         IERC20 indexed token1,
         address pair,
         uint32 ampBps,
-        uint224 baseRate,
         uint256 totalPair
     );
 
@@ -30,19 +32,27 @@ contract XYZSwapFactory is IXYZSwapFactory {
     function createPair(
         IERC20 tokenA,
         IERC20 tokenB,
-        uint32 ampBps,
-        uint224 baseRate
+        uint32 ampBps
     ) external override returns (address pair) {
         require(tokenA != tokenB, "XYZSwap: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "XYZSwap: ZERO_ADDRESS");
+        require(ampBps >= BPS, "XYZSwap: INVALID_BPS");
+        if (ampBps == BPS) {
+            // ensure only 1 non-amplification pair exists
+            require(getNonAmpPair[token0][token1] == address(0), "XYZSwap: PAIR_EXISTS");
+        }
         pair = address(new XYZSwapPair());
-        XYZSwapPair(pair).initialize(token0, token1, ampBps, baseRate);
+        XYZSwapPair(pair).initialize(token0, token1, ampBps);
         tokenPairs[token0][token1].add(pair);
         tokenPairs[token1][token0].add(pair);
+        if (ampBps == BPS) {
+            getNonAmpPair[token0][token1] = pair;
+            getNonAmpPair[token1][token0] = pair;
+        }
         allPairs.push(pair);
 
-        emit PairCreated(token0, token1, pair, ampBps, baseRate, allPairs.length);
+        emit PairCreated(token0, token1, pair, ampBps, allPairs.length);
     }
 
     function setFeeTo(address _feeTo) external override {

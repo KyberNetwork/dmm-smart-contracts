@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./libraries/MathExt.sol";
 import "./libraries/FeeFomula.sol";
 import "./libraries/ERC20Permit.sol";
-import "./libraries/UQ112x112.sol";
 
 import "./interfaces/IXYZSwapFactory.sol";
 import "./interfaces/IXYZSwapCallee.sol";
@@ -18,10 +17,9 @@ import "./VolumeTrendRecorder.sol";
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    using UQ112x112 for uint224;
 
-    uint256 public constant MAX_UINT112 = 2**112 - 1;
-    uint256 public constant BPS = 10000;
+    uint256 internal constant MAX_UINT112 = 2**112 - 1;
+    uint256 internal constant BPS = 10000;
 
     struct ReserveData {
         uint256 reserve0;
@@ -44,7 +42,6 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     /// @dev addition param only when pool is amp
     uint112 internal vReserve0;
     uint112 internal vReserve1;
-    uint224 internal baseRate;
 
     /// @dev vReserve0 * vReserve1, as of immediately after the most recent liquidity event
     uint256 public kLast;
@@ -70,15 +67,12 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     function initialize(
         IERC20 _token0,
         IERC20 _token1,
-        uint32 _ampBps,
-        uint224 _baseRate
-    ) external override {
+        uint32 _ampBps
+    ) external {
         require(msg.sender == factory, "XYZSwap: FORBIDDEN"); // sufficient check
-        require(_ampBps >= BPS, "XYZSwap: INVALID_BPS");
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
-        baseRate = _baseRate;
     }
 
     /// @dev this low-level function should be called from a contract
@@ -96,14 +90,6 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         if (_totalSupply == 0) {
             if (isAmpPool) {
                 uint32 _ampBps = ampBps;
-                uint224 _baseRate = baseRate;
-                uint224 reserveRate = UQ112x112.encode(safeUint112(_data.reserve1)).uqdiv(
-                    safeUint112(_data.reserve0)
-                );
-                uint224 delta = (reserveRate >= _baseRate)
-                    ? reserveRate - _baseRate
-                    : _baseRate - reserveRate;
-                require(uint256(delta).mul(BPS).div(uint256(_baseRate)) == 0, "invalid init rate");
                 _data.vReserve0 = _data.reserve0.mul(_ampBps) / BPS;
                 _data.vReserve1 = _data.reserve1.mul(_ampBps) / BPS;
             }
@@ -116,7 +102,9 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             );
             if (isAmpPool) {
                 _data.vReserve0 = data.vReserve0.mul(liquidity.add(_totalSupply)) / _totalSupply;
+                _data.vReserve0 = Math.max(_data.vReserve0, _data.reserve0);
                 _data.vReserve1 = data.vReserve1.mul(liquidity.add(_totalSupply)) / _totalSupply;
+                _data.vReserve1 = Math.max(_data.vReserve1, _data.reserve1);
             }
         }
         require(liquidity > 0, "XYZSwap: INSUFFICIENT_LIQUIDITY_MINTED");
@@ -160,7 +148,9 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         data.reserve1 = _token1.balanceOf(address(this));
         if (isAmpPool) {
             data.vReserve0 = data.vReserve0.mul(_totalSupply.sub(liquidity)) / _totalSupply;
+            data.vReserve0 = Math.max(data.vReserve0, data.reserve0);
             data.vReserve1 = data.vReserve1.mul(_totalSupply.sub(liquidity)) / _totalSupply;
+            data.vReserve1 = Math.max(data.vReserve1, data.reserve1);
         }
         _update(isAmpPool, data);
         if (feeOn) kLast = getK(isAmpPool, data); // data are up-to-date
@@ -238,8 +228,8 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                 newData.reserve0.mul(_totalSupply) / data.reserve0,
                 newData.reserve1.mul(_totalSupply) / data.reserve1
             );
-            newData.vReserve0 = data.vReserve0.mul(_totalSupply.add(b)) / _totalSupply;
-            newData.vReserve1 = data.vReserve1.mul(_totalSupply.add(b)) / _totalSupply;
+            newData.vReserve0 = Math.max(data.vReserve0.mul(b) / _totalSupply, newData.reserve0);
+            newData.vReserve1 = Math.max(data.vReserve1.mul(b) / _totalSupply, newData.reserve1);
         }
         _update(isAmpPool, newData);
     }

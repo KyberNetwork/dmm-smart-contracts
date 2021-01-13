@@ -39,15 +39,15 @@ contract('XYZSwapPair', function (accounts) {
   });
 
   it('can not initialize not by factory', async () => {
-    [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
-    await expectRevert(pair.initialize(token0.address, token1.address, nonAmpBps, new BN(0)), 'XYZSwap: FORBIDDEN');
+    [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
+    await expectRevert(pair.initialize(token0.address, token1.address, nonAmpBps), 'XYZSwap: FORBIDDEN');
   });
 
   describe('mint', async () => {
     it('non-amp pair', async () => {
       const token0Amount = Helper.expandTo18Decimals(1);
       const token1Amount = Helper.expandTo18Decimals(4);
-      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
       await token0.transfer(pair.address, token0Amount);
       await token1.transfer(pair.address, token1Amount);
 
@@ -96,8 +96,7 @@ contract('XYZSwapPair', function (accounts) {
       ampBps = new BN(20000);
       const token0Amount = Helper.expandTo18Decimals(1);
       const token1Amount = Helper.expandTo18Decimals(4);
-      let baseRate = new BN(4).mul(Helper.Q112);
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, baseRate);
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
       await token0.transfer(pair.address, token0Amount);
       await token1.transfer(pair.address, token1Amount);
 
@@ -165,7 +164,7 @@ contract('XYZSwapPair', function (accounts) {
     swapTestCases.forEach((testCase, i) => {
       const [swapAmount, token0Amount, token1Amount] = testCase;
       it(`getInputPrice:${i} non-amp pair`, async () => {
-        [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+        [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
         await addLiquidity(
           liquidityProvider,
           pair,
@@ -183,7 +182,7 @@ contract('XYZSwapPair', function (accounts) {
           .mul(Helper.Q112)
           .div(expandTo18Decimals(token0Amount));
 
-        [factory, pair] = await setupPair(admin, token0, token1, ampBps, baseRate);
+        [factory, pair] = await setupPair(admin, token0, token1, ampBps);
         await addLiquidity(
           liquidityProvider,
           pair,
@@ -198,7 +197,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('swap:token0 amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, new BN(2).mul(Helper.Q112));
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
       const token0Amount = expandTo18Decimals(5);
       const token1Amount = expandTo18Decimals(10);
       const swapAmount = expandTo18Decimals(1);
@@ -257,7 +256,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('swap:token0 non-amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
       const token0Amount = expandTo18Decimals(5);
       const token1Amount = expandTo18Decimals(10);
       const swapAmount = expandTo18Decimals(1);
@@ -319,7 +318,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('swap:token1 amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, new BN(2).mul(Helper.Q112));
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
       const token0Amount = expandTo18Decimals(5);
       const token1Amount = expandTo18Decimals(10);
       await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
@@ -415,7 +414,7 @@ contract('XYZSwapPair', function (accounts) {
 
   describe('burn', async () => {
     it('burn non-amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
       const token0Amount = expandTo18Decimals(3);
       const token1Amount = expandTo18Decimals(3);
       await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
@@ -458,7 +457,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('burn amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, new BN(4).mul(Helper.Q112));
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
       const token0Amount = expandTo18Decimals(1);
       const token1Amount = expandTo18Decimals(4);
       await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
@@ -508,7 +507,7 @@ contract('XYZSwapPair', function (accounts) {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
 
-      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
       await factory.setFeeTo(feeTo, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
       let totalSuppy = await pair.totalSupply();
@@ -556,7 +555,7 @@ contract('XYZSwapPair', function (accounts) {
       const vToken0Amount = token0Amount.mul(ampBps).div(Helper.BPS);
       const vToken1Amount = token1Amount.mul(ampBps).div(Helper.BPS);
 
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, Helper.Q112);
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
       await factory.setFeeTo(feeTo, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
       let totalSuppy = await pair.totalSupply();
@@ -599,7 +598,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('feeTo:off non-amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps, new BN(0));
+      [factory, pair] = await setupPair(admin, token0, token1, nonAmpBps);
 
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
@@ -617,7 +616,7 @@ contract('XYZSwapPair', function (accounts) {
     });
 
     it('feeTo:off amp pair', async () => {
-      [factory, pair] = await setupPair(admin, token0, token1, ampBps, Helper.Q112);
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
 
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
@@ -635,8 +634,8 @@ contract('XYZSwapPair', function (accounts) {
     });
   });
 
-  it.only('sync', async () => {
-    [factory, pair] = await setupPair(admin, token0, token1, ampBps, Helper.Q112);
+  it('sync', async () => {
+    [factory, pair] = await setupPair(admin, token0, token1, ampBps);
 
     const token0Amount = expandTo18Decimals(1);
     const token1Amount = expandTo18Decimals(1);
@@ -646,10 +645,8 @@ contract('XYZSwapPair', function (accounts) {
     let priceRange = XyzHelper.getPriceRange(tradeInfo);
     console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
 
-    await token0.transfer(pair.address, expandTo18Decimals(1));
-    // await token1.transfer(pair.address, new BN(1));
-    await pair.transfer(pair.address, expandTo18Decimals(1).sub(MINIMUM_LIQUIDITY), {from: liquidityProvider});  
-    await pair.burn(liquidityProvider);
+    await token0.transfer(pair.address, expandTo18Decimals(2));
+    await pair.sync();
 
     tradeInfo = await pair.getTradeInfo();
     priceRange = XyzHelper.getPriceRange(tradeInfo);
@@ -692,10 +689,10 @@ async function setupFactory (admin) {
   return await XYZSwapFactory.new(admin);
 }
 
-async function setupPair (admin, tokenA, tokenB, ampBps, baseRate) {
+async function setupPair (admin, tokenA, tokenB, ampBps) {
   let factory = await setupFactory(admin);
 
-  await factory.createPair(tokenA.address, tokenB.address, ampBps, baseRate);
+  await factory.createPair(tokenA.address, tokenB.address, ampBps);
   const pairAddrs = await factory.getPairs(tokenA.address, tokenB.address);
   const pair = await XYZSwapPair.at(pairAddrs[0]);
 

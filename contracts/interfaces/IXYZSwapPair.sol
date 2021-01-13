@@ -14,13 +14,6 @@ interface IXYZSwapPair {
         bytes calldata data
     ) external;
 
-    function initialize(
-        IERC20 _token0,
-        IERC20 _token1,
-        uint32 _ampBps,
-        uint224 _baseRate
-    ) external;
-
     function getReserves()
         external
         view

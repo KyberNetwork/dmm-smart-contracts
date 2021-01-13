@@ -6,8 +6,7 @@ interface IXYZSwapFactory {
     function createPair(
         IERC20 tokenA,
         IERC20 tokenB,
-        uint32 ampBps,
-        uint224 baseRate
+        uint32 ampBps
     ) external returns (address pair);
 
     function setFeeTo(address) external;
@@ -21,6 +20,8 @@ interface IXYZSwapFactory {
     function allPairs(uint256) external view returns (address pair);
 
     function allPairsLength() external view returns (uint256);
+
+    function getNonAmpPair(IERC20 token0, IERC20 token1) external view returns (address);
 
     function getPairs(IERC20 token0, IERC20 token1)
         external

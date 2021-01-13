@@ -17,6 +17,8 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     using SafeERC20 for IWETH;
     using SafeMath for uint256;
 
+    uint256 internal constant BPS = 10000;
+
     address public immutable override factory;
     IWETH public immutable override weth;
 
@@ -46,7 +48,6 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     ) internal virtual view returns (uint256 amountA, uint256 amountB) {
         (uint256 reserveA, uint256 reserveB) = XYZSwapLibrary.getReserves(pair, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
-            //TODO: did we check the base price here
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
             uint256 amountBOptimal = XYZSwapLibrary.quote(amountADesired, reserveA, reserveB);
@@ -73,7 +74,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address to,
         uint256 deadline
     )
-        external
+        public
         virtual
         override
         ensure(deadline)
@@ -108,7 +109,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address to,
         uint256 deadline
     )
-        external
+        public
         override
         payable
         ensure(deadline)
@@ -136,6 +137,81 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         if (msg.value > amountETH) {
             TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
         }
+    }
+
+    function addLiquidityNewPool(
+        IERC20 tokenA,
+        IERC20 tokenB,
+        uint32 ampBps,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        override
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        )
+    {
+        address pair;
+        if (ampBps == BPS) {
+            pair = IXYZSwapFactory(factory).getNonAmpPair(tokenA, tokenB);
+        }
+        if (pair == address(0)) {
+            pair = IXYZSwapFactory(factory).createPair(tokenA, tokenB, ampBps);
+        }
+        (amountA, amountB, liquidity) = addLiquidity(
+            tokenA,
+            tokenB,
+            pair,
+            amountADesired,
+            amountBDesired,
+            amountAMin,
+            amountBMin,
+            to,
+            deadline
+        );
+    }
+
+    function addLiquidityNewPoolETH(
+        IERC20 token,
+        uint32 ampBps,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        override
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountETH,
+            uint256 liquidity
+        )
+    {
+        address pair;
+        if (ampBps == BPS) {
+            pair = IXYZSwapFactory(factory).getNonAmpPair(token, weth);
+        }
+        if (pair == address(0)) {
+            pair = IXYZSwapFactory(factory).createPair(token, weth, ampBps);
+        }
+        (amountToken, amountETH, liquidity) = addLiquidityETH(
+            token,
+            pair,
+            amountTokenDesired,
+            amountTokenMin,
+            amountETHMin,
+            to,
+            deadline
+        );
     }
 
     // **** REMOVE LIQUIDITY ****
