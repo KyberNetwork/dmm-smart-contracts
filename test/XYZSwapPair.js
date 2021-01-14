@@ -503,7 +503,7 @@ contract('XYZSwapPair', function (accounts) {
   });
 
   describe('fee', async () => {
-    it('feeTo:on non-amp pair', async () => {
+    it.skip('feeTo:on non-amp pair', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
 
@@ -549,7 +549,7 @@ contract('XYZSwapPair', function (accounts) {
       Helper.assertEqual(await pair.kLast(), new BN(0));
     });
 
-    it('feeTo:on amp pair', async () => {
+    it.skip('feeTo:on amp pair', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
       const vToken0Amount = token0Amount.mul(ampBps).div(Helper.BPS);

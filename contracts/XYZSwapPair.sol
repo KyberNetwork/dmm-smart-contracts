@@ -14,6 +14,12 @@ import "./interfaces/IXYZSwapCallee.sol";
 import "./interfaces/IXYZSwapPair.sol";
 import "./VolumeTrendRecorder.sol";
 
+interface IFeeTo {
+    function sync(IERC20 token) external;
+
+    function isNewEpoch(IERC20 token) external view returns (bool);
+}
+
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -45,6 +51,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
     /// @dev vReserve0 * vReserve1, as of immediately after the most recent liquidity event
     uint256 public kLast;
+    uint32 public lastEpochFee;
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
@@ -85,7 +92,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 amount0 = _data.reserve0.sub(data.reserve0);
         uint256 amount1 = _data.reserve1.sub(data.reserve1);
 
-        bool feeOn = _mintFee(isAmpPool, data);
+        bool feeOn = _mintFee(isAmpPool, data, false);
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             if (isAmpPool) {
@@ -135,7 +142,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         );
         uint256 liquidity = balanceOf(address(this));
 
-        bool feeOn = _mintFee(isAmpPool, data);
+        bool feeOn = _mintFee(isAmpPool, data, false);
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
@@ -173,7 +180,13 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             amount0Out < data.reserve0 && amount1Out < data.reserve1,
             "XYZSwap: INSUFFICIENT_LIQUIDITY"
         );
-
+        {
+            // scope for feeOn, avoids stack too deep errors
+            bool feeOn = _mintFee(isAmpPool, data, true);
+            if (feeOn) {
+                kLast = getK(isAmpPool, data);
+            }
+        }
         ReserveData memory newData;
         {
             // scope for _token{0,1}, avoids stack too deep errors
@@ -322,9 +335,17 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     }
 
     /// @dev if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
-    function _mintFee(bool isAmpPool, ReserveData memory data) internal returns (bool feeOn) {
+    function _mintFee(
+        bool isAmpPool,
+        ReserveData memory data,
+        bool isSwap
+    ) internal returns (bool feeOn) {
         address feeTo = IXYZSwapFactory(factory).feeTo();
         feeOn = feeTo != address(0);
+        if (isSwap) {
+            if (!feeOn) return false;
+            if (!IFeeTo(feeTo).isNewEpoch(IERC20(this))) return false;
+        }
         uint256 _kLast = kLast; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
@@ -335,7 +356,12 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                     /// TODO: later change this configuration
                     uint256 denominator = rootK.mul(5).add(rootKLast);
                     uint256 liquidity = numerator / denominator;
-                    if (liquidity > 0) _mint(feeTo, liquidity);
+                    if (liquidity > 0) {
+                        _mint(feeTo, liquidity);
+                        if (IFeeTo(feeTo).isNewEpoch(IERC20(this))) {
+                            IFeeTo(feeTo).sync(IERC20(this));
+                        }
+                    }
                 }
             }
         } else if (_kLast != 0) {
