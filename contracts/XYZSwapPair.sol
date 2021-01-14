@@ -14,6 +14,10 @@ import "./interfaces/IXYZSwapCallee.sol";
 import "./interfaces/IXYZSwapPair.sol";
 import "./VolumeTrendRecorder.sol";
 
+interface IFeeTo {
+    function sync(IERC20 token) external;
+}
+
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -332,7 +336,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                     /// TODO: later change this configuration
                     uint256 denominator = rootK.mul(5).add(rootKLast);
                     uint256 liquidity = numerator / denominator;
-                    if (liquidity > 0) _mint(feeTo, liquidity);
+                    if (liquidity > 0) {
+                        _mint(feeTo, liquidity);
+                        IFeeTo(feeTo).sync(IERC20(this));
+                    }
                 }
             }
         } else if (_kLast != 0) {
