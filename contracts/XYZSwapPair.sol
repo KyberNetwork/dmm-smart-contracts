@@ -101,10 +101,9 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                 amount1.mul(_totalSupply) / data.reserve1
             );
             if (isAmpPool) {
-                _data.vReserve0 = data.vReserve0.mul(liquidity.add(_totalSupply)) / _totalSupply;
-                _data.vReserve0 = Math.max(_data.vReserve0, _data.reserve0);
-                _data.vReserve1 = data.vReserve1.mul(liquidity.add(_totalSupply)) / _totalSupply;
-                _data.vReserve1 = Math.max(_data.vReserve1, _data.reserve1);
+                uint256 b = liquidity.add(_totalSupply);
+                _data.vReserve0 = Math.max(data.vReserve0.mul(b) / _totalSupply, _data.reserve0);
+                _data.vReserve1 = Math.max(data.vReserve1.mul(b) / _totalSupply, _data.reserve1);
             }
         }
         require(liquidity > 0, "XYZSwap: INSUFFICIENT_LIQUIDITY_MINTED");
@@ -144,16 +143,19 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         _burn(address(this), liquidity);
         _token0.safeTransfer(to, amount0);
         _token1.safeTransfer(to, amount1);
-        data.reserve0 = _token0.balanceOf(address(this));
-        data.reserve1 = _token1.balanceOf(address(this));
+        ReserveData memory _data;
+        _data.reserve0 = _token0.balanceOf(address(this));
+        _data.reserve1 = _token1.balanceOf(address(this));
         if (isAmpPool) {
-            data.vReserve0 = data.vReserve0.mul(_totalSupply.sub(liquidity)) / _totalSupply;
-            data.vReserve0 = Math.max(data.vReserve0, data.reserve0);
-            data.vReserve1 = data.vReserve1.mul(_totalSupply.sub(liquidity)) / _totalSupply;
-            data.vReserve1 = Math.max(data.vReserve1, data.reserve1);
+            uint256 b = Math.min(
+                _data.reserve0.mul(_totalSupply) / data.reserve0,
+                _data.reserve1.mul(_totalSupply) / data.reserve1
+            );
+            _data.vReserve0 = Math.max(data.vReserve0.mul(b) / _totalSupply, _data.reserve0);
+            _data.vReserve1 = Math.max(data.vReserve1.mul(b) / _totalSupply, _data.reserve1);
         }
-        _update(isAmpPool, data);
-        if (feeOn) kLast = getK(isAmpPool, data); // data are up-to-date
+        _update(isAmpPool, _data);
+        if (feeOn) kLast = getK(isAmpPool, _data); // data are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
