@@ -68,14 +68,15 @@ contract FeeTo is Utils, DaoOperator, ReentrancyGuard {
             return; // avoid revert for unConfig token
         }
 
+        uint256 epoch = lastEpoch[token];
+        lastEpoch[token] = getCurrentEpochNumber();
+
         uint256 fee = token.balanceOf(address(this)).sub(reserves[token]);
         if (fee == 0) {
             return;
         }
 
-        uint256 epoch = lastEpoch[token];
         rewardsPerEpoch[epoch][token] = rewardsPerEpoch[epoch][token].add(fee);
-        lastEpoch[token] = getCurrentEpochNumber();
 
         emit FeeDistributed(token, epoch, fee);
     }

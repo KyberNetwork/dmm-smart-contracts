@@ -52,6 +52,7 @@ contract('FeeTo', accounts => {
       Helper.MaxUint256,
       {value: Helper.expandTo18Decimals(10)}
     );
+    await feeTo.sync(pair.address);
 
     let txResult = await router.swapExactETHForTokens(
       new BN(0),
@@ -78,6 +79,6 @@ contract('FeeTo', accounts => {
     );
     console.log(`gas used when swap with _mintFee: ${txResult.receipt.gasUsed}`);
 
-    console.log(await feeTo.rewardsPerEpoch(new BN(0), pair.address));
+    console.log(await feeTo.rewardsPerEpoch(new BN(1), pair.address));
   });
 });
