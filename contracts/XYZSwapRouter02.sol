@@ -392,7 +392,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address to,
         uint256 deadline
     ) public virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
@@ -410,7 +410,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address to,
         uint256 deadline
     ) public override ensure(deadline) returns (uint256[] memory amounts) {
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= amountInMax, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
         path[0].safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
@@ -425,7 +425,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         uint256 deadline
     ) external override payable ensure(deadline) returns (uint256[] memory amounts) {
         require(path[0] == weth, "XYZSwapRouter: INVALID_PATH");
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsOut(msg.value, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
@@ -445,7 +445,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         uint256 deadline
     ) external override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[path.length - 1] == weth, "XYZSwapRouter: INVALID_PATH");
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= amountInMax, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
         path[0].safeTransferFrom(msg.sender, pairsPath[0], amounts[0]);
@@ -463,7 +463,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         uint256 deadline
     ) external override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[path.length - 1] == weth, "XYZSwapRouter: INVALID_PATH");
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
         require(
             amounts[amounts.length - 1] >= amountOutMin,
@@ -483,7 +483,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         uint256 deadline
     ) external override payable ensure(deadline) returns (uint256[] memory amounts) {
         require(path[0] == weth, "XYZSwapRouter: INVALID_PATH");
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         amounts = XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
         require(amounts[0] <= msg.value, "XYZSwapRouter: EXCESSIVE_INPUT_AMOUNT");
         IWETH(weth).deposit{value: amounts[0]}();
@@ -502,7 +502,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         IERC20[] memory path,
         address _to
     ) internal {
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         for (uint256 i; i < path.length - 1; i++) {
             (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
             (IERC20 token0, ) = XYZSwapLibrary.sortTokens(input, output);
@@ -605,7 +605,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address[] calldata pairsPath,
         IERC20[] calldata path
     ) external override view returns (uint256[] memory amounts) {
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         return XYZSwapLibrary.getAmountsOut(amountIn, pairsPath, path);
     }
 
@@ -614,11 +614,11 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address[] calldata pairsPath,
         IERC20[] calldata path
     ) external override view returns (uint256[] memory amounts) {
-        veiryPairsPathSwap(pairsPath, path);
+        verifyPairsPathSwap(pairsPath, path);
         return XYZSwapLibrary.getAmountsIn(amountOut, pairsPath, path);
     }
 
-    function veiryPairsPathSwap(address[] memory pairsPath, IERC20[] memory path) internal view {
+    function verifyPairsPathSwap(address[] memory pairsPath, IERC20[] memory path) internal view {
         require(path.length >= 2, "XYZSwapRouter: INVALID_PATH");
         require(pairsPath.length == path.length - 1, "XYZSwapRouter: INVALID_PAIRS_PATH");
         // IXYZSwapFactory _factory = IXYZSwapFactory(factory);

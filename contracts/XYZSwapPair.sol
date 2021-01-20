@@ -30,7 +30,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
 
-    address public factory;
+    IXYZSwapFactory public factory;
     IERC20 public token0;
     IERC20 public token1;
 
@@ -60,7 +60,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
 
     constructor() public ERC20Permit("XYZSwap LP", "XYZ-LP", "1") VolumeTrendRecorder(0) {
-        factory = msg.sender;
+        factory = IXYZSwapFactory(msg.sender);
     }
 
     // called once by the factory at time of deployment
@@ -69,7 +69,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         IERC20 _token1,
         uint32 _ampBps
     ) external {
-        require(msg.sender == factory, "XYZSwap: FORBIDDEN"); // sufficient check
+        require(msg.sender == address(factory), "XYZSwap: FORBIDDEN"); // sufficient check
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
@@ -323,7 +323,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
     /// @dev if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
     function _mintFee(bool isAmpPool, ReserveData memory data) internal returns (bool feeOn) {
-        address feeTo = IXYZSwapFactory(factory).feeTo();
+        address feeTo = factory.feeTo();
         feeOn = feeTo != address(0);
         uint256 _kLast = kLast; // gas savings
         if (feeOn) {

@@ -12,7 +12,7 @@ contract MockXYZSwapPair is XYZSwapPair {
         IERC20 _token1,
         bool isAmpPair
     ) public XYZSwapPair() {
-        factory = _factory;
+        factory = IXYZSwapFactory(_factory);
         token0 = _token0;
         token1 = _token1;
         ampBps = isAmpPair ? uint32(BPS + 1) : uint32(BPS);
