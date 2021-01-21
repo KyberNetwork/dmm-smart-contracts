@@ -60,7 +60,7 @@ contract FeeTo is Utils, DaoOperator, ReentrancyGuard {
     }
 
     function isNewEpoch(IERC20 token) external view returns (bool) {
-        return allowedToken[token] && getCurrentEpochNumber() != lastEpoch[token];
+        return allowedToken[token] && kyberDao.getCurrentEpochNumber() != lastEpoch[token];
     }
 
     function sync(IERC20 token) external {
@@ -69,7 +69,7 @@ contract FeeTo is Utils, DaoOperator, ReentrancyGuard {
         }
 
         uint256 epoch = lastEpoch[token];
-        lastEpoch[token] = getCurrentEpochNumber();
+        lastEpoch[token] = kyberDao.getCurrentEpochNumber();
 
         uint256 fee = token.balanceOf(address(this)).sub(reserves[token]);
         if (fee == 0) {
@@ -137,14 +137,5 @@ contract FeeTo is Utils, DaoOperator, ReentrancyGuard {
         token.safeTransfer(staker, amountWei);
 
         emit RewardPaid(staker, epoch, token, amountWei);
-    }
-
-    function getCurrentEpochNumber() internal view returns (uint256 epoch) {
-        IKyberDao _kyberDao = kyberDao;
-        if (_kyberDao == IKyberDao(0)) {
-            return 0;
-        } else {
-            return _kyberDao.getCurrentEpochNumber();
-        }
     }
 }
