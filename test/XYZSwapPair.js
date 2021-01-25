@@ -178,10 +178,6 @@ contract('XYZSwapPair', function (accounts) {
       });
 
       it(`getInputPrice:${i} amp pair`, async () => {
-        let baseRate = expandTo18Decimals(token1Amount)
-          .mul(Helper.Q112)
-          .div(expandTo18Decimals(token0Amount));
-
         [factory, pair] = await setupPair(admin, token0, token1, ampBps);
         await addLiquidity(
           liquidityProvider,
