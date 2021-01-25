@@ -1,4 +1,5 @@
 const Helper = require('./helper');
+const XyzHelper = require('./xyzHelper');
 const BN = web3.utils.BN;
 
 const {precisionUnits, MINIMUM_LIQUIDITY} = require('./helper');
@@ -14,6 +15,7 @@ const TestToken = artifacts.require('TestToken');
 const bigAmount = new BN(2).pow(new BN(250));
 
 let trader;
+let feeToSetter;
 let feeTo;
 let liquidityProvider;
 let liquidityProviderPkKey;
@@ -32,7 +34,8 @@ const BNOne = new BN(1);
 const MaxUint256 = new BN(2).pow(new BN(256)).sub(BNOne);
 
 contract('XYZSwapRouter', function (accounts) {
-  beforeEach('setup', async () => {
+  before('setup', async () => {
+    feeToSetter = accounts[0];
     trader = accounts[1];
     app = accounts[2];
     liquidityProvider = accounts[3];
@@ -40,27 +43,28 @@ contract('XYZSwapRouter', function (accounts) {
     liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
     feeTo = accounts[4];
 
-    factory = await XYZSwapFactory.new(accounts[0]);
-    let tokenA = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(10000));
-    let tokenB = await TestToken.new('test token B', 'B', Helper.expandTo18Decimals(10000));
+    let tokenA = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(100000));
+    let tokenB = await TestToken.new('test token B', 'B', Helper.expandTo18Decimals(100000));
     tokenA.transfer(trader, initTokenAmount);
     tokenB.transfer(trader, initTokenAmount);
+    [token0, token1] = new BN(tokenA.address).lt(new BN(tokenB.address)) ? [tokenA, tokenB] : [tokenB, tokenA];
 
-    await factory.createPair(tokenA.address, tokenB.address, new BN(10000));
-    const pairAddrs = await factory.getPairs(tokenA.address, tokenB.address);
-    pair = await XYZSwapPair.at(pairAddrs[0]);
-
-    const token0Address = await pair.token0();
-    token0 = tokenA.address === token0Address ? tokenA : tokenB;
-    token1 = tokenA.address === token0Address ? tokenB : tokenA;
-
-    ethPartner = await TestToken.new('WETH Partner', 'WETH-P', Helper.expandTo18Decimals(10000));
     weth = await WETH.new();
+    ethPartner = await TestToken.new('WETH Partner', 'WETH-P', Helper.expandTo18Decimals(100000));
     await ethPartner.transfer(trader, initTokenAmount);
+  });
+
+  beforeEach('setup', async () => {
+    factory = await XYZSwapFactory.new(accounts[0]);
+    /// create pair tokenA and tokenB
+    await factory.createPair(token0.address, token1.address, new BN(10000));
+    const pairAddrs = await factory.getPairs(token0.address, token1.address);
+    pair = await XYZSwapPair.at(pairAddrs[0]);
+    /// create pair weth and ethPartner
     await factory.createPair(weth.address, ethPartner.address, new BN(10000));
     const wethPairAddresses = await factory.getPairs(weth.address, ethPartner.address);
     ethPair = await XYZSwapPair.at(wethPairAddresses[0]);
-
+    /// create router
     router = await XYZSwapRouter.new(factory.address, weth.address);
   });
 
@@ -243,6 +247,22 @@ contract('XYZSwapRouter', function (accounts) {
         router.addLiquidity(
           token0.address,
           token1.address,
+          ethPartner.address,
+          Helper.expandTo18Decimals(2),
+          Helper.expandTo18Decimals(2),
+          expectedToken0Amount.add(new BN(1)),
+          0,
+          trader,
+          bigAmount,
+          {from: trader}
+        ),
+        'XYZSwapRouter: INVALID_PAIR'
+      );
+
+      await expectRevert(
+        router.addLiquidity(
+          token0.address,
+          token1.address,
           pair.address,
           Helper.expandTo18Decimals(2),
           Helper.expandTo18Decimals(2),
@@ -260,8 +280,8 @@ contract('XYZSwapRouter', function (accounts) {
           token1.address,
           token0.address,
           pair.address,
-          Helper.expandTo18Decimals(2),
-          Helper.expandTo18Decimals(2),
+          updateAmount,
+          updateAmount,
           0,
           expectedToken0Amount.add(new BN(1)),
           trader,
@@ -275,8 +295,8 @@ contract('XYZSwapRouter', function (accounts) {
         token0.address,
         token1.address,
         pair.address,
-        Helper.expandTo18Decimals(2),
-        Helper.expandTo18Decimals(2),
+        updateAmount,
+        updateAmount,
         0,
         0,
         trader,
@@ -293,44 +313,13 @@ contract('XYZSwapRouter', function (accounts) {
       updateAmount = Helper.expandTo18Decimals(1);
       let expectedToken1Amount = Helper.expandTo18Decimals(4);
       Helper.assertEqual(await router.quote(updateAmount, token0Amount, token1Amount), expectedToken1Amount);
-      await expectRevert(
-        router.addLiquidity(
-          token0.address,
-          token1.address,
-          pair.address,
-          updateAmount,
-          Helper.expandTo18Decimals(5),
-          0,
-          expectedToken1Amount.add(new BN(1)),
-          trader,
-          bigAmount,
-          {from: trader}
-        ),
-        'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
-      );
-
-      await expectRevert(
-        router.addLiquidity(
-          token1.address,
-          token0.address,
-          pair.address,
-          Helper.expandTo18Decimals(5),
-          updateAmount,
-          expectedToken1Amount.add(new BN(1)),
-          0,
-          trader,
-          bigAmount,
-          {from: trader}
-        ),
-        'XYZSwapRouter: INSUFFICIENT_A_AMOUNT'
-      );
 
       result = await router.addLiquidity(
-        token0.address,
         token1.address,
+        token0.address,
         pair.address,
-        updateAmount,
         Helper.expandTo18Decimals(5),
+        updateAmount,
         0,
         0,
         trader,
@@ -351,6 +340,20 @@ contract('XYZSwapRouter', function (accounts) {
       const expectedLiquidity = Helper.expandTo18Decimals(2);
       const ethPairToken0 = await ethPair.token0();
       await ethPartner.approve(router.address, bigAmount, {from: trader});
+
+      await expectRevert(
+        router.addLiquidityETH(
+          ethPartner.address,
+          pair.address,
+          ethPartnerAmount,
+          ethPartnerAmount,
+          ethAmount,
+          trader,
+          bigAmount,
+          {from: trader, value: ethAmount.add(new BN(100))}
+        ),
+        'XYZSwapRouter: INVALID_PAIR'
+      );
 
       let result = await router.addLiquidityETH(
         ethPartner.address,
@@ -466,6 +469,21 @@ contract('XYZSwapRouter', function (accounts) {
         {from: trader}
       ),
       'XYZSwapRouter: INSUFFICIENT_B_AMOUNT'
+    );
+
+    await expectRevert(
+      router.removeLiquidity(
+        token0.address,
+        token1.address,
+        ethPair.address,
+        expectedLiquidity.sub(MINIMUM_LIQUIDITY),
+        token0Amount.sub(new BN(499)),
+        0,
+        trader,
+        bigAmount,
+        {from: trader}
+      ),
+      'XYZSwapRouter: INVALID_PAIR'
     );
 
     let result = await router.removeLiquidity(
@@ -678,6 +696,79 @@ contract('XYZSwapRouter', function (accounts) {
     );
   });
 
+  describe('test query rate function', async () => {
+    it('getAmountOut', async () => {
+      let [factory, pair] = await setupPair(feeToSetter, token0, token1, new BN(20000));
+      let router = await XYZSwapRouter.new(factory.address, weth.address);
+      const token0Amount = Helper.expandTo18Decimals(5);
+      const token1Amount = Helper.expandTo18Decimals(10);
+      const swapAmount = Helper.expandTo18Decimals(1);
+      const pairsPath = [pair.address];
+      const path = [token0.address, token1.address];
+      // revert if invalid path.length
+      await expectRevert(router.getAmountsOut(swapAmount, pairsPath, [token0.address]), 'XYZSwapRouter: INVALID_PATH');
+      await expectRevert(
+        router.getAmountsOut(swapAmount, pairsPath, [token0.address, token1.address, weth.address]),
+        'XYZSwapRouter: INVALID_PAIRS_PATH'
+      );
+
+      // revert if there is no liquidity
+      await expectRevert(router.getAmountsOut(swapAmount, pairsPath, path), 'XYZSwapLibrary: INSUFFICIENT_LIQUIDITY');
+
+      await addLiquidity(liquidityProvider, pair, token0, token1, token0Amount, token1Amount);
+      // revert if amountOut == 0
+      await expectRevert(
+        router.getAmountsOut(new BN(0), pairsPath, path),
+        'XYZSwapLibrary: INSUFFICIENT_INPUT_AMOUNT'
+      );
+      // special case virtual balance is not enough for trade
+      let bigAmountIn = await XyzHelper.getAmountIn(token1Amount.add(new BN(1)), token0, pair);
+      await expectRevert(router.getAmountsOut(bigAmountIn, pairsPath, path), 'XYZSwapLibrary: INSUFFICIENT_LIQUIDITY');
+      await router.getAmountsOut(bigAmountIn.sub(new BN(1)), pairsPath, path);
+
+      // test revert amount in
+      let amounts = await router.getAmountsOut(swapAmount, pairsPath, path);
+      const amountOut = amounts[amounts.length - 1];
+      amounts = await router.getAmountsIn(amountOut.add(new BN(1)), pairsPath, path);
+      Helper.assertLesser(swapAmount, amounts[0]);
+      amounts = await router.getAmountsIn(amountOut, pairsPath, path);
+      Helper.assertEqual(swapAmount, amounts[0]);
+    });
+
+    it('getAmountIn', async () => {
+      [factory, pair] = await setupPair(feeToSetter, token0, token1, new BN(20000));
+      const router = await XYZSwapRouter.new(factory.address, weth.address);
+      const token0Amount = Helper.expandTo18Decimals(5);
+      const token1Amount = Helper.expandTo18Decimals(10);
+      const swapAmount = Helper.expandTo18Decimals(1);
+      const pairsPath = [pair.address];
+      const path = [token0.address, token1.address];
+      // revert if there is no liquidity
+      await expectRevert(router.getAmountsIn(swapAmount, pairsPath, path), 'XYZSwapLibrary: INSUFFICIENT_LIQUIDITY');
+
+      await addLiquidity(liquidityProvider, pair, token0, token1, token0Amount, token1Amount);
+      // revert if amountOut == 0
+      await expectRevert(
+        router.getAmountsIn(new BN(0), pairsPath, path),
+        'XYZSwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT'
+      );
+      // special case virtual balance is not enough for trade
+      await expectRevert(
+        router.getAmountsIn(token1Amount.add(new BN(1)), pairsPath, path),
+        'XYZSwapLibrary: INSUFFICIENT_LIQUIDITY'
+      );
+      await router.getAmountsIn(token1Amount, pairsPath, path);
+
+      // test revert amount in
+      let amounts = await router.getAmountsIn(swapAmount, pairsPath, path);
+      const amountIn = amounts[0];
+      amounts = await router.getAmountsOut(amountIn.sub(new BN(1)), pairsPath, path);
+      Helper.assertGreater(swapAmount, amounts[amounts.length - 1]);
+      amounts = await router.getAmountsOut(amountIn, pairsPath, path);
+      Helper.assertEqual(swapAmount, amounts[amounts.length - 1]);
+    });
+  });
+
   it('swapETHForExactTokens', async () => {
     let ethPartnerAmount = Helper.expandTo18Decimals(10);
     let ethAmount = Helper.expandTo18Decimals(5);
@@ -773,6 +864,7 @@ contract('XYZSwapRouter', function (accounts) {
 
     await ethPartner.approve(router.address, bigAmount, {from: trader});
     let ethBalance = await Helper.getBalancePromise(trader);
+    let tokenBalance = await ethPartner.balanceOf(trader);
 
     await expectRevert(
       router.swapExactTokensForETH(swapAmount, 0, pairsPath, [ethPartner.address, token0.address], trader, bigAmount, {
@@ -809,7 +901,7 @@ contract('XYZSwapRouter', function (accounts) {
       to: router.address
     });
 
-    Helper.assertEqual(await ethPartner.balanceOf(trader), initTokenAmount.sub(swapAmount));
+    Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.sub(swapAmount));
     Helper.assertEqual(await Helper.getBalancePromise(trader), ethBalance.add(expectAmountOut));
   });
 
@@ -832,6 +924,7 @@ contract('XYZSwapRouter', function (accounts) {
     let expectAmountIn = amounts[0];
 
     let ethBalance = await Helper.getBalancePromise(trader);
+    let tokenBalance = await ethPartner.balanceOf(trader);
 
     const invalidPath = [ethPartner.address, token0.address];
     await expectRevert(
@@ -870,7 +963,7 @@ contract('XYZSwapRouter', function (accounts) {
       to: router.address
     });
 
-    Helper.assertEqual(await ethPartner.balanceOf(trader), initTokenAmount.sub(expectAmountIn));
+    Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.sub(expectAmountIn));
     Helper.assertEqual(await Helper.getBalancePromise(trader), ethBalance.add(outputAmount));
   });
 
@@ -894,6 +987,7 @@ contract('XYZSwapRouter', function (accounts) {
     let expectedOutputAmount = amounts[amounts.length - 1];
 
     let ethBalance = await Helper.getBalancePromise(trader);
+    let tokenBalance = await ethPartner.balanceOf(trader);
 
     const invalidPath = [token0.address, ethPartner.address];
     await expectRevert(
@@ -934,7 +1028,7 @@ contract('XYZSwapRouter', function (accounts) {
       to: trader
     });
 
-    Helper.assertEqual(await ethPartner.balanceOf(trader), initTokenAmount.add(expectedOutputAmount));
+    Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.add(expectedOutputAmount));
     Helper.assertEqual(await Helper.getBalancePromise(trader), ethBalance.sub(swapAmount));
   });
 
@@ -952,6 +1046,10 @@ contract('XYZSwapRouter', function (accounts) {
 
     let amounts = await router.getAmountsOut(swapAmount, pairsPath, path);
     let expectedOutputAmount = amounts[amounts.length - 1];
+
+    const token0Balance = await token0.balanceOf(trader);
+    const token1Balance = await token1.balanceOf(trader);
+
     // revert if amountDesired < amountOut
     await expectRevert(
       router.swapExactTokensForTokens(
@@ -993,8 +1091,8 @@ contract('XYZSwapRouter', function (accounts) {
       to: trader
     });
 
-    Helper.assertEqual(await token0.balanceOf(trader), initTokenAmount.sub(swapAmount));
-    Helper.assertEqual(await token1.balanceOf(trader), initTokenAmount.add(expectedOutputAmount));
+    Helper.assertEqual(await token0.balanceOf(trader), token0Balance.sub(swapAmount));
+    Helper.assertEqual(await token1.balanceOf(trader), token1Balance.add(expectedOutputAmount));
   });
 
   it('swapTokensForExactTokens', async () => {
@@ -1011,6 +1109,9 @@ contract('XYZSwapRouter', function (accounts) {
 
     let amounts = await router.getAmountsIn(outputAmount, pairsPath, path);
     let expectedSwapAmount = amounts[0];
+
+    const token0Balance = await token0.balanceOf(trader);
+    const token1Balance = await token1.balanceOf(trader);
     // revert if amountDesired > amountIn
     await expectRevert(
       router.swapTokensForExactTokens(
@@ -1053,7 +1154,27 @@ contract('XYZSwapRouter', function (accounts) {
       to: trader
     });
 
-    Helper.assertEqual(await token0.balanceOf(trader), initTokenAmount.sub(expectedSwapAmount));
-    Helper.assertEqual(await token1.balanceOf(trader), initTokenAmount.add(outputAmount));
+    Helper.assertEqual(await token0.balanceOf(trader), token0Balance.sub(expectedSwapAmount));
+    Helper.assertEqual(await token1.balanceOf(trader), token1Balance.add(outputAmount));
   });
 });
+
+async function setupFactory (admin) {
+  return await XYZSwapFactory.new(admin);
+}
+
+async function setupPair (admin, token0, token1, ampBps) {
+  const factory = await setupFactory(admin);
+  await factory.createPair(token0.address, token1.address, ampBps);
+
+  const pairAddrs = await factory.getPairs(token0.address, token1.address);
+  const pair = await XYZSwapPair.at(pairAddrs[0]);
+
+  return [factory, pair];
+}
+
+async function addLiquidity (liquidityProvider, pair, token0, token1, token0Amount, token1Amount) {
+  await token0.transfer(pair.address, token0Amount);
+  await token1.transfer(pair.address, token1Amount);
+  await pair.mint(liquidityProvider);
+}

@@ -311,10 +311,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         reserve1 = safeUint112(data.reserve1);
         blockTimestampLast = blockTimestamp;
         if (isAmpPool) {
-            require(
-                data.vReserve0 >= data.reserve0 && data.vReserve1 >= data.reserve1,
-                "XYZSwap: INVALID_RESERVES"
-            );
+            assert(data.vReserve0 >= data.reserve0 && data.vReserve1 >= data.reserve1); // never happen
             vReserve0 = safeUint112(data.vReserve0);
             vReserve1 = safeUint112(data.vReserve1);
         }

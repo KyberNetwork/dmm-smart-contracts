@@ -84,7 +84,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             uint256 liquidity
         )
     {
-        require(verifyPairAddress(tokenA, tokenB, pair), "XYZSwapRouter: INVALID_PAIR");
+        verifyPairAddress(tokenA, tokenB, pair);
         (amountA, amountB) = _addLiquidity(
             tokenA,
             tokenB,
@@ -119,7 +119,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
             uint256 liquidity
         )
     {
-        require(verifyPairAddress(token, weth, pair), "XYZSwapRouter: INVALID_PAIR");
+        verifyPairAddress(token, weth, pair);
         (amountToken, amountETH) = _addLiquidity(
             token,
             weth,
@@ -225,7 +225,7 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         address to,
         uint256 deadline
     ) public override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
-        require(verifyPairAddress(tokenA, tokenB, pair), "XYZSwapRouter: INVALID_PAIR");
+        verifyPairAddress(tokenA, tokenB, pair);
         IERC20(pair).safeTransferFrom(msg.sender, pair, liquidity); // send liquidity to pair
         (uint256 amount0, uint256 amount1) = IXYZSwapPair(pair).burn(to);
         (IERC20 token0, ) = XYZSwapLibrary.sortTokens(tokenA, tokenB);
@@ -621,12 +621,8 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
     function verifyPairsPathSwap(address[] memory pairsPath, IERC20[] memory path) internal view {
         require(path.length >= 2, "XYZSwapRouter: INVALID_PATH");
         require(pairsPath.length == path.length - 1, "XYZSwapRouter: INVALID_PAIRS_PATH");
-        // IXYZSwapFactory _factory = IXYZSwapFactory(factory);
         for (uint256 i = 0; i < pairsPath.length; i++) {
-            require(
-                IXYZSwapFactory(factory).isPair(path[i], path[i + 1], pairsPath[i]),
-                "XYZSwapRouter: INVALID_PAIR"
-            );
+            verifyPairAddress(path[i], path[i + 1], pairsPath[i]);
         }
     }
 
@@ -634,7 +630,10 @@ contract XYZSwapRouter02 is IXYZSwapRouter02 {
         IERC20 tokenA,
         IERC20 tokenB,
         address pair
-    ) internal view returns (bool) {
-        return IXYZSwapFactory(factory).isPair(tokenA, tokenB, pair);
+    ) internal view {
+        require(
+            IXYZSwapFactory(factory).isPair(tokenA, tokenB, pair),
+            "XYZSwapRouter: INVALID_PAIR"
+        );
     }
 }

@@ -82,12 +82,11 @@ library XYZSwapLibrary {
     ) internal pure returns (uint256 amountOut) {
         require(amountIn > 0, "XYZSwapLibrary: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
-        require(feeInPrecision < PRECISION, "XYZSwapLibrary: INVALID_FEE");
-        uint256 amountInWithFee = amountIn.mul(PRECISION - feeInPrecision).div(PRECISION);
+        uint256 amountInWithFee = amountIn.mul(PRECISION.sub(feeInPrecision)).div(PRECISION);
         uint256 numerator = amountInWithFee.mul(vReserveOut);
         uint256 denominator = vReserveIn.add(amountInWithFee);
         amountOut = numerator.div(denominator);
-        require(amountOut <= reserveOut, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
+        require(reserveOut >= amountOut, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
     }
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
@@ -100,14 +99,13 @@ library XYZSwapLibrary {
         uint256 feeInPrecision
     ) internal pure returns (uint256 amountIn) {
         require(amountOut > 0, "XYZSwapLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
-        require(reserveIn > 0 && reserveOut > amountOut, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
-        require(feeInPrecision < PRECISION, "XYZSwapLibrary: INVALID_FEE");
+        require(reserveIn > 0 && reserveOut >= amountOut, "XYZSwapLibrary: INSUFFICIENT_LIQUIDITY");
         uint256 numerator = vReserveIn.mul(amountOut);
         uint256 denominator = vReserveOut.sub(amountOut);
         amountIn = numerator.div(denominator).add(1);
         // amountIn = floor(amountIN *PRECISION / (PRECISION - feeInPrecision));
         numerator = amountIn.mul(PRECISION);
-        denominator = PRECISION - feeInPrecision;
+        denominator = PRECISION.sub(feeInPrecision);
         amountIn = numerator.add(denominator - 1).div(denominator);
     }
 
@@ -117,8 +115,6 @@ library XYZSwapLibrary {
         address[] memory pairsPath,
         IERC20[] memory path
     ) internal view returns (uint256[] memory amounts) {
-        require(path.length >= 2, "invalid Path");
-        require(pairsPath.length == path.length - 1, "invalid pairsPath");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         for (uint256 i; i < path.length - 1; i++) {

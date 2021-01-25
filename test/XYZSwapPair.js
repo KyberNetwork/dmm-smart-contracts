@@ -634,29 +634,51 @@ contract('XYZSwapPair', function (accounts) {
     });
   });
 
-  it('sync', async () => {
-    [factory, pair] = await setupPair(admin, token0, token1, ampBps);
+  describe('sync', async () => {
+    it('case 1: donation from 1 side', async () => {
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
 
-    const token0Amount = expandTo18Decimals(1);
-    const token1Amount = expandTo18Decimals(1);
-    await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
+      const token0Amount = expandTo18Decimals(1);
+      const token1Amount = expandTo18Decimals(1);
+      await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
 
-    let tradeInfo = await pair.getTradeInfo();
-    let priceRange = XyzHelper.getPriceRange(tradeInfo);
-    console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+      let tradeInfo = await pair.getTradeInfo();
+      let priceRange = XyzHelper.getPriceRange(tradeInfo);
+      console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
 
-    await token0.transfer(pair.address, expandTo18Decimals(2));
-    await pair.sync();
+      await token0.transfer(pair.address, expandTo18Decimals(2));
+      await pair.sync();
 
-    tradeInfo = await pair.getTradeInfo();
-    priceRange = XyzHelper.getPriceRange(tradeInfo);
-    console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+      tradeInfo = await pair.getTradeInfo();
+      priceRange = XyzHelper.getPriceRange(tradeInfo);
+      console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+    });
+
+    it('case 2: donation from 2 side -> reserve data should scale up', async () => {
+      [factory, pair] = await setupPair(admin, token0, token1, ampBps);
+
+      const token0Amount = expandTo18Decimals(1);
+      const token1Amount = expandTo18Decimals(1);
+      await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
+
+      let tradeInfo = await pair.getTradeInfo();
+      let priceRange = XyzHelper.getPriceRange(tradeInfo);
+
+      await token0.transfer(pair.address, expandTo18Decimals(2));
+      await token1.transfer(pair.address, expandTo18Decimals(2));
+      await pair.sync();
+
+      tradeInfo = await pair.getTradeInfo();
+      let priceRange2 = XyzHelper.getPriceRange(tradeInfo);
+      Helper.assertEqualArray(priceRange, priceRange2); // unchange price range
+    });
   });
 
-  it.skip('skim', async () => {
+  it('skim', async () => {
+    [factory, pair] = await setupPair(admin, token0, token1, ampBps);
     const token0Amount = expandTo18Decimals(1000);
     const token1Amount = expandTo18Decimals(1000);
-    await addLiquidity(liquidityProvider, token0Amount, token1Amount);
+    await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
 
     token0.transfer(pair.address, expandTo18Decimals(1));
     let beforeBalance = await token0.balanceOf(trader);
@@ -664,9 +686,11 @@ contract('XYZSwapPair', function (accounts) {
     let afterBalance = await token0.balanceOf(trader);
     Helper.assertEqual(afterBalance.sub(beforeBalance), expandTo18Decimals(1));
 
-    let reserves = await pair.getReserves();
-    Helper.assertEqual(reserves._reserve0, expandTo18Decimals(1000));
-    Helper.assertEqual(reserves._reserve1, expandTo18Decimals(1000));
+    let tradeInfo = await pair.getTradeInfo();
+    Helper.assertEqual(tradeInfo._reserve0, expandTo18Decimals(1000));
+    Helper.assertEqual(tradeInfo._reserve1, expandTo18Decimals(1000));
+    Helper.assertEqual(tradeInfo._vReserve0, expandTo18Decimals(2000));
+    Helper.assertEqual(tradeInfo._vReserve1, expandTo18Decimals(2000));
   });
 });
 
