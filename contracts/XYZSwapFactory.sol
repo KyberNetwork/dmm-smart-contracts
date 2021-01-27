@@ -38,7 +38,7 @@ contract XYZSwapFactory is IXYZSwapFactory {
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "XYZSwap: ZERO_ADDRESS");
         require(ampBps >= BPS, "XYZSwap: INVALID_BPS");
-        // only exist 1 non-amplificaiton pool of a pair.
+        // only exist 1 non-amplification pool of a pair.
         require(
             ampBps != BPS || getNonAmpPair[token0][token1] == address(0),
             "XYZSwap: PAIR_EXISTS"
