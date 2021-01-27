@@ -1,6 +1,6 @@
 const {artifacts} = require('hardhat');
 const BN = web3.utils.BN;
-const Helper = require('./Helper');
+const Helper = require('./helper');
 
 const XYZSwapFactory = artifacts.require('XYZSwapFactory');
 const XYZSwapRouter02 = artifacts.require('XYZSwapRouter02');

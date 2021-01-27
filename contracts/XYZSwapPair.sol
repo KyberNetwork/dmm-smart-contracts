@@ -14,10 +14,6 @@ import "./interfaces/IXYZSwapCallee.sol";
 import "./interfaces/IXYZSwapPair.sol";
 import "./VolumeTrendRecorder.sol";
 
-interface IFeeTo {
-    function sync(IERC20 token) external;
-}
-
 contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -62,6 +58,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 feeInPrecision
     );
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
+    event CallbackSyncFailed();
 
     constructor() public ERC20Permit("XYZSwap LP", "XYZ-LP", "1") VolumeTrendRecorder(0) {
         factory = IXYZSwapFactory(msg.sender);
@@ -224,6 +221,8 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     /// @dev force reserves to match balances
     function sync() external nonReentrant {
         (bool isAmpPool, ReserveData memory data) = getReservesData();
+        bool feeOn = _mintFee(isAmpPool, data);
+
         ReserveData memory newData;
         newData.reserve0 = IERC20(token0).balanceOf(address(this));
         newData.reserve1 = IERC20(token1).balanceOf(address(this));
@@ -238,6 +237,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
             newData.vReserve1 = Math.max(data.vReserve1.mul(b) / _totalSupply, newData.reserve1);
         }
         _update(isAmpPool, newData);
+        if (feeOn) kLast = getK(isAmpPool, newData); // data are up-to-date
     }
 
     /// @dev returns data to calculate amountIn, amountOut
@@ -338,7 +338,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
                     uint256 liquidity = numerator / denominator;
                     if (liquidity > 0) {
                         _mint(feeTo, liquidity);
-                        IFeeTo(feeTo).sync(IERC20(this));
+                        (bool success, ) = address(feeTo).call(
+                            abi.encodeWithSignature("sync(address)", address(this))
+                        );
+                        if (!success) emit CallbackSyncFailed();
                     }
                 }
             }
