@@ -611,6 +611,12 @@ contract('XYZSwapPair', function (accounts) {
       await pair.transfer(pair.address, expectedLiquidity.sub(MINIMUM_LIQUIDITY), {from: liquidityProvider});
       await pair.burn(liquidityProvider);
       Helper.assertEqual(await pair.totalSupply(), MINIMUM_LIQUIDITY);
+      Helper.assertEqual(await pair.kLast(), new BN(0));
+      // turn on fee.
+      await factory.setFeeConfiguration(feeTo, new BN(1000));
+      await addLiquidity(liquidityProvider, pair, token0Amount, token1Amount);
+      Helper.assertGreater(await pair.kLast(), new BN(0));
+      Helper.assertEqual(await pair.balanceOf(feeTo), new BN(0));
     });
 
     it('feeTo:off amp pair', async () => {
@@ -689,6 +695,10 @@ contract('XYZSwapPair', function (accounts) {
     Helper.assertEqual(tradeInfo._reserve1, expandTo18Decimals(1000));
     Helper.assertEqual(tradeInfo._vReserve0, expandTo18Decimals(2000));
     Helper.assertEqual(tradeInfo._vReserve1, expandTo18Decimals(2000));
+    // test case overflow
+    await token0.transfer(pair.address, new BN(2).pow(new BN(112)));
+    await expectRevert(pair.sync(), 'XYZSwap: OVERFLOW');
+    await pair.skim(trader);
   });
 });
 
