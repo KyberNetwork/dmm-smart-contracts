@@ -29,7 +29,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     }
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
-
+    /// @dev To make etherscan auto-verify new pair, these variables are not immutable
     IXYZSwapFactory public factory;
     IERC20 public token0;
     IERC20 public token1;
@@ -38,7 +38,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
     uint112 internal reserve0;
     uint112 internal reserve1;
     uint32 internal blockTimestampLast;
-    uint32 internal ampBps;
+    uint32 public ampBps;
     /// @dev addition param only when pool is amp
     uint112 internal vReserve0;
     uint112 internal vReserve1;
