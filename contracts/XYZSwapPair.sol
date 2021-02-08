@@ -20,6 +20,7 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
 
     uint256 internal constant MAX_UINT112 = 2**112 - 1;
     uint256 internal constant BPS = 10000;
+    uint256 internal constant AMP_STABLE_PAIR_THRESHOLD = 80 * BPS;
 
     struct ReserveData {
         uint256 reserve0;
@@ -261,6 +262,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         }
         uint256 rFactorInPrecision = getRFactor(block.number);
         feeInPrecision = FeeFomula.getFee(rFactorInPrecision);
+        /// stable coins fee range [15-60] -> [2-8]
+        if(ampBps >= AMP_STABLE_PAIR_THRESHOLD) {
+            feeInPrecision = feeInPrecision * 2 / 15;
+        }
     }
 
     /// @dev returns reserve data to calculate amount to add liquidity
@@ -291,6 +296,10 @@ contract XYZSwapPair is IXYZSwapPair, ERC20Permit, ReentrancyGuard, VolumeTrendR
         uint256 volume = beforeReserve0.mul(amount1In).div(beforeReserve1).add(amount0In);
         uint256 rFactorInPrecision = recordNewUpdatedVolume(block.number, volume);
         feeInPrecision = FeeFomula.getFee(rFactorInPrecision);
+        /// stable coins fee range [15-60] -> [2-8]
+        if(ampBps >= AMP_STABLE_PAIR_THRESHOLD) {
+            feeInPrecision = feeInPrecision * 2 / 15;
+        }
         //verify balance update is match with fomula
         uint256 balance0Adjusted = afterReserve0.mul(PRECISION);
         balance0Adjusted = balance0Adjusted.sub(amount0In.mul(feeInPrecision));
