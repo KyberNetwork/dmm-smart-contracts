@@ -25,7 +25,10 @@ contract DaoRegistry is Ownable {
     ) external onlyOwner {
         // populate mapping in the reverse direction
         if (isAdd) {
-            require(IXYZSwapFactory(factory).isPair(token0, token1, pair), "Registry: INVALID_PAIR");
+            require(
+                IXYZSwapFactory(factory).isPair(token0, token1, pair),
+                "Registry: INVALID_PAIR"
+            );
 
             tokenPairs[token0][token1].add(pair);
             tokenPairs[token1][token0].add(pair);
