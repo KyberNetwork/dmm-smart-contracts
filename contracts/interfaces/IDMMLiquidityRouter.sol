@@ -7,7 +7,7 @@ interface IDMMLiquidityRouter {
     function addLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
-        address pair,
+        address pool,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
@@ -59,7 +59,7 @@ interface IDMMLiquidityRouter {
 
     function addLiquidityETH(
         IERC20 token,
-        address pair,
+        address,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -77,7 +77,7 @@ interface IDMMLiquidityRouter {
     function removeLiquidity(
         IERC20 tokenA,
         IERC20 tokenB,
-        address pair,
+        address pool,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -88,7 +88,7 @@ interface IDMMLiquidityRouter {
     function removeLiquidityWithPermit(
         IERC20 tokenA,
         IERC20 tokenB,
-        address pair,
+        address,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -108,7 +108,7 @@ interface IDMMLiquidityRouter {
 
     function removeLiquidityETH(
         IERC20 token,
-        address pair,
+        address pool,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -118,7 +118,7 @@ interface IDMMLiquidityRouter {
 
     function removeLiquidityETHWithPermit(
         IERC20 token,
-        address pair,
+        address pool,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,

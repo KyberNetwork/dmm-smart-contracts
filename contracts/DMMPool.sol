@@ -29,7 +29,7 @@ contract DMMPool is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
     }
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
-    /// @dev To make etherscan auto-verify new pair, these variables are not immutable
+    /// @dev To make etherscan auto-verify new pool, these variables are not immutable
     IDMMFactory public factory;
     IERC20 public token0;
     IERC20 public token1;
@@ -59,7 +59,7 @@ contract DMMPool is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
     );
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
 
-    constructor() public ERC20Permit("DMM LP", "XYZ-LP", "1") VolumeTrendRecorder(0) {
+    constructor() public ERC20Permit("DMM LP", "DMM-LP", "1") VolumeTrendRecorder(0) {
         factory = IDMMFactory(msg.sender);
     }
 
