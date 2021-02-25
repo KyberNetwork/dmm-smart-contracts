@@ -88,7 +88,7 @@ interface IDMMLiquidityRouter {
     function removeLiquidityWithPermit(
         IERC20 tokenA,
         IERC20 tokenB,
-        address,
+        address pool,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -99,12 +99,6 @@ interface IDMMLiquidityRouter {
         bytes32 r,
         bytes32 s
     ) external returns (uint256 amountA, uint256 amountB);
-
-    function quote(
-        uint256 amountA,
-        uint256 reserveA,
-        uint256 reserveB
-    ) external pure returns (uint256 amountB);
 
     function removeLiquidityETH(
         IERC20 token,
@@ -129,4 +123,10 @@ interface IDMMLiquidityRouter {
         bytes32 r,
         bytes32 s
     ) external returns (uint256 amountToken, uint256 amountETH);
+
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) external pure returns (uint256 amountB);
 }

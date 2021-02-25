@@ -1,4 +1,4 @@
-# Dynamic automated Market Maker
+# Dynamic Automated Market Maker
 ## Introduction
 [![built-with openzeppelin](https://img.shields.io/badge/built%20with-OpenZeppelin-3677FF)](https://docs.openzeppelin.com/)
 [![Build Status](https://api.travis-ci.com/dynamic-amm/smart-contracts.svg?branch=master&status=passed)](https://travis-ci.com/github/KyberNetwork/kyber_reserves_sc)
