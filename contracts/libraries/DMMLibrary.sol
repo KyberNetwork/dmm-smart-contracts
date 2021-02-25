@@ -21,7 +21,7 @@ library DMMLibrary {
         require(address(token0) != address(0), "DMMLibrary: ZERO_ADDRESS");
     }
 
-    /// @dev fetch the reserves and fee for a pool, used for trading purpose
+    /// @dev fetch the reserves and fee for a pool, used for trading purposes
     function getTradeInfo(
         address pool,
         IERC20 tokenA,

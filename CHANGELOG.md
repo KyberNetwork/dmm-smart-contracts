@@ -17,9 +17,9 @@ Router contract will also check if these pools are created from factory contract
     - For add/remove liquidity, users must specify which pools they choose to add/remove liquidity.   
 To add liquidity to a new pool, users would use function `addLiquidityNewPool` and `addLiquidityNewPoolETH`  
 - Change in fee:
-  - We divide pool into 4 categories, the higher amplification will inidicate that the more stable price, so we use lower base fee
-    - Similar asserts pools(amplifacationFactor > 20): baseFee = 4 bps
-    - Strongly correlated assets pools (20 >= amplicationFactor > 5): baseFee = 10 bps
+  - We divide token pools into 4 categories. In general, the higher amplification used indicate greater price stability, so we use lower base fees.
+    - Similar asserts pools(amplificationFactor > 20): baseFee = 4 bps
+    - Strongly correlated assets pools (20 >= amplificationFactor > 5): baseFee = 10 bps
     - Correlated assets pools (5 >= amplificationFactor > 2): baseFee = 20 bps
-    - Uncorrelated assets pools: (amplifactionFactor <= 2): baseFee = 30 bps
-  - For network fee: we keep to mechanism from uniswap but let `FeeToSetter` can set fee from network from up to 20% grow of the pool (this number of uniswap is 1/6)
+    - Uncorrelated assets pools: (amplificationFactor <= 2): baseFee = 30 bps
+  - For network fee: we keep to mechanism as uniswap but have `FeeToSetter` to set fees up to 20% grow of the pool (uniswap uses 1/6)

@@ -22,7 +22,7 @@ let liquidityProvider;
 let app;
 
 let ampBps = new BN(20000);
-let nonAmpBps = new BN(10000);
+let unamplifiedBps = new BN(10000);
 
 let baseRate = new BN(0);
 
@@ -39,15 +39,15 @@ contract('DMMPool', function (accounts) {
   });
 
   it('can not initialize not by factory', async () => {
-    [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
-    await expectRevert(pool.initialize(token0.address, token1.address, nonAmpBps), 'DMM: FORBIDDEN');
+    [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
+    await expectRevert(pool.initialize(token0.address, token1.address, unamplifiedBps), 'DMM: FORBIDDEN');
   });
 
   describe('mint', async () => {
-    it('non-amp pool', async () => {
+    it('unamplified pool', async () => {
       const token0Amount = Helper.expandTo18Decimals(1);
       const token1Amount = Helper.expandTo18Decimals(4);
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       await token0.transfer(pool.address, token0Amount);
       await token1.transfer(pool.address, token1Amount);
 
@@ -163,8 +163,8 @@ contract('DMMPool', function (accounts) {
 
     swapTestCases.forEach((testCase, i) => {
       const [swapAmount, token0Amount, token1Amount] = testCase;
-      it(`getInputPrice:${i} non-amp pool`, async () => {
-        [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+      it(`getInputPrice:${i} unamplified pool`, async () => {
+        [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
         await addLiquidity(
           liquidityProvider,
           pool,
@@ -251,8 +251,8 @@ contract('DMMPool', function (accounts) {
       console.log(`amp pool swap gasUsed = ${txResult.receipt.gasUsed}`);
     });
 
-    it('swap:token0 non-amp pool', async () => {
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+    it('swap:token0 unamplified pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       const token0Amount = expandTo18Decimals(5);
       const token1Amount = expandTo18Decimals(10);
       const swapAmount = expandTo18Decimals(1);
@@ -310,7 +310,7 @@ contract('DMMPool', function (accounts) {
       // balance of token1 should increase by amountOut
       Helper.assertEqual(await token1.balanceOf(trader), beforeBalanceToken1.add(amountOut));
       // this number of uniswap is 73462
-      console.log(`nonAmp pool swap gasUsed = ${txResult.receipt.gasUsed}`);
+      console.log(`unamplified pool swap gasUsed = ${txResult.receipt.gasUsed}`);
     });
 
     [20000, 50000, 200000, 1000000].forEach(ampBPS => {
@@ -415,8 +415,8 @@ contract('DMMPool', function (accounts) {
       Helper.assertEqual(await token1.balanceOf(trader), beforeBalanceToken1);
     });
 
-    it('swap:token1 non-amp pool', async () => {
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps, new BN(0));
+    it('swap:token1 unamplified pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps, new BN(0));
       const token0Amount = expandTo18Decimals(5);
       const token1Amount = expandTo18Decimals(10);
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
@@ -475,8 +475,8 @@ contract('DMMPool', function (accounts) {
   });
 
   describe('burn', async () => {
-    it('burn non-amp pool', async () => {
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+    it('burn unamplified pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       const token0Amount = expandTo18Decimals(3);
       const token1Amount = expandTo18Decimals(3);
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
@@ -565,12 +565,12 @@ contract('DMMPool', function (accounts) {
   });
 
   describe('fee', async () => {
-    it('feeTo:on non-amp pool', async () => {
+    it('feeTo:on unamplified pool', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
       const governmentFeeBps = new BN(1000);
 
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       await factory.setFeeConfiguration(feeTo, governmentFeeBps, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
       let totalSuppy = await pool.totalSupply();
@@ -661,8 +661,8 @@ contract('DMMPool', function (accounts) {
       Helper.assertEqual(await pool.kLast(), new BN(0));
     });
 
-    it('feeTo:off non-amp pool', async () => {
-      [factory, pool] = await setupPool(admin, token0, token1, nonAmpBps);
+    it('feeTo:off unamplified pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
 
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);

@@ -109,7 +109,7 @@ contract('DMMRouter', function (accounts) {
       const expectedLiquidity = Helper.sqrt(tokenAAmount.mul(tokenBAmount)).sub(MINIMUM_LIQUIDITY);
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
 
-      // non-amp pool
+      // unamplified pool
       result = await router.addLiquidityNewPool(
         tokenB.address,
         tokenA.address,
@@ -129,7 +129,7 @@ contract('DMMRouter', function (accounts) {
         reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount
       });
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
-      // addliquidity for non-amp again
+      // addliquidity for unamplified again
       result = await router.addLiquidityNewPool(
         tokenB.address,
         tokenA.address,
@@ -176,7 +176,7 @@ contract('DMMRouter', function (accounts) {
       const expectedLiquidity = Helper.sqrt(tokenAmount.mul(ethAmount)).sub(MINIMUM_LIQUIDITY);
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
 
-      // non-amp pool
+      // unamplified pool
       result = await router.addLiquidityNewPoolETH(
         token.address,
         new BN(10000),
@@ -194,7 +194,7 @@ contract('DMMRouter', function (accounts) {
         reserve1: token.address == token0Address ? ethAmount : tokenAmount
       });
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
-      // addliquidity for non-amp again
+      // addliquidity for unamplified again
       result = await router.addLiquidityNewPoolETH(
         token.address,
         new BN(10000),

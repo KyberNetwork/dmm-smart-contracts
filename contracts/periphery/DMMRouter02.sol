@@ -160,7 +160,7 @@ contract DMMRouter02 is IDMMRouter02 {
     {
         address pool;
         if (ampBps == BPS) {
-            pool = IDMMFactory(factory).getNonAmpPool(tokenA, tokenB);
+            pool = IDMMFactory(factory).getUnamplifiedPool(tokenA, tokenB);
         }
         if (pool == address(0)) {
             pool = IDMMFactory(factory).createPool(tokenA, tokenB, ampBps);
@@ -198,7 +198,7 @@ contract DMMRouter02 is IDMMRouter02 {
     {
         address pool;
         if (ampBps == BPS) {
-            pool = IDMMFactory(factory).getNonAmpPool(token, weth);
+            pool = IDMMFactory(factory).getUnamplifiedPool(token, weth);
         }
         if (pool == address(0)) {
             pool = IDMMFactory(factory).createPool(token, weth, ampBps);

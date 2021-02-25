@@ -25,16 +25,16 @@ contract('DMMFactory', function (accounts) {
   });
 
   it('create pool', async () => {
-    const nonAmpBps = new BN(10000);
+    const unamplifiedBps = new BN(10000);
     const ampBps = new BN(20000);
-    await expectRevert(factory.createPool(tokenA.address, constants.ZERO_ADDRESS, nonAmpBps), 'DMM: ZERO_ADDRESS');
+    await expectRevert(factory.createPool(tokenA.address, constants.ZERO_ADDRESS, unamplifiedBps), 'DMM: ZERO_ADDRESS');
 
-    await expectRevert(factory.createPool(tokenA.address, tokenA.address, nonAmpBps), 'DMM: IDENTICAL_ADDRESSES');
+    await expectRevert(factory.createPool(tokenA.address, tokenA.address, unamplifiedBps), 'DMM: IDENTICAL_ADDRESSES');
 
     await expectRevert(factory.createPool(tokenA.address, tokenB.address, new BN(9999)), 'DMM: INVALID_BPS');
-    /// create nonAmp pool
-    await factory.createPool(tokenA.address, tokenB.address, nonAmpBps);
-    await expectRevert(factory.createPool(tokenA.address, tokenB.address, nonAmpBps), 'DMM: NON_AMP_POOL_EXISTS');
+    /// create unamplified pool
+    await factory.createPool(tokenA.address, tokenB.address, unamplifiedBps);
+    await expectRevert(factory.createPool(tokenA.address, tokenB.address, unamplifiedBps), 'DMM: UNAMPLIFIED_POOL_EXISTS');
     Helper.assertEqual(await factory.allPoolsLength(), 1);
 
     /// create amp pool

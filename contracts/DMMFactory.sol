@@ -15,7 +15,7 @@ contract DMMFactory is IDMMFactory {
     address public override feeToSetter;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPools;
-    mapping(IERC20 => mapping(IERC20 => address)) public override getNonAmpPool;
+    mapping(IERC20 => mapping(IERC20 => address)) public override getUnamplifiedPool;
     address[] public override allPools;
 
     event PoolCreated(
@@ -41,10 +41,10 @@ contract DMMFactory is IDMMFactory {
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(address(token0) != address(0), "DMM: ZERO_ADDRESS");
         require(ampBps >= BPS, "DMM: INVALID_BPS");
-        // only exist 1 non-amplification pool of a pool.
+        // only exist 1 unamplified pool of a pool.
         require(
-            ampBps != BPS || getNonAmpPool[token0][token1] == address(0),
-            "DMM: NON_AMP_POOL_EXISTS"
+            ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
+            "DMM: UNAMPLIFIED_POOL_EXISTS"
         );
         pool = address(new DMMPool());
         DMMPool(pool).initialize(token0, token1, ampBps);
@@ -52,8 +52,8 @@ contract DMMFactory is IDMMFactory {
         tokenPools[token0][token1].add(pool);
         tokenPools[token1][token0].add(pool);
         if (ampBps == BPS) {
-            getNonAmpPool[token0][token1] = pool;
-            getNonAmpPool[token1][token0] = pool;
+            getUnamplifiedPool[token0][token1] = pool;
+            getUnamplifiedPool[token1][token0] = pool;
         }
         allPools.push(pool);
 

@@ -28,7 +28,7 @@ contract('FeeTo', accounts => {
   it('demo feeTo', async () => {
     let factory = await DMMFactory.new(feeToSetter);
     await factory.createPool(weth.address, token.address, new BN(10000));
-    const poolAddress = await factory.getNonAmpPool(weth.address, token.address);
+    const poolAddress = await factory.getUnamplifiedPool(weth.address, token.address);
     const pool = await DMMPool.at(poolAddress);
 
     /// setup dao and feeTo
