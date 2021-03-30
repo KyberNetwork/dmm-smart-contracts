@@ -228,6 +228,7 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
             );
             amountA = IERC20(tokenA).balanceOf(address(this)).sub(balanceTokenA);
             amountB = IERC20(tokenB).balanceOf(address(this)).sub(balanceTokenB);
+            require(amountA > 0 && amountB > 0, "Migrator: INVALID_AMOUNT");
         }
 
         (amountA, amountB, addedLiquidity) = _addLiquidityToDmmPool(
@@ -274,9 +275,9 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
         internal
         returns (uint256 amountA, uint256 amountB, uint256 liquidity)
     {
-        // safe approve only needed
-        _safeApproveAllowance(IERC20(tokenA), address(dmmRouter), amountADesired);
-        _safeApproveAllowance(IERC20(tokenB), address(dmmRouter), amountBDesired);
+        // safe approve only if needed
+        _safeApproveAllowance(IERC20(tokenA), address(dmmRouter));
+        _safeApproveAllowance(IERC20(tokenB), address(dmmRouter));
         if (poolInfo.poolAddress == address(0)) {
             // add to new pool
             (amountA, amountB, liquidity) = _addLiquidityNewPool(
@@ -378,11 +379,11 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
     /**
     * @dev only approve if the current allowance is 0
     */
-    function _safeApproveAllowance(IERC20 token, address spender, uint256 allowance)
+    function _safeApproveAllowance(IERC20 token, address spender)
         internal
     {
         if (token.allowance(address(this), spender) == 0) {
-            token.safeApprove(spender, allowance);
+            token.safeApprove(spender, uint256(-1));
         }
     }
 

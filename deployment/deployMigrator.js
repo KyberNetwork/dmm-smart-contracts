@@ -13,23 +13,23 @@ const UniswapV2Factory = Helper.getTruffleContract('./node_modules/@uniswap/v2-c
 const UniswapV2Router = Helper.getTruffleContract('./node_modules/@uniswap/v2-periphery/build/UniswapV2Router02.json');
 // const UniswapV2Pair = Helper.getTruffleContract('./node_modules/@uniswap/v2-core/build/UniswapV2Pair.json');
 
-let migratorAddress;
+let migratorAddress = "0xf026ea3512ec19027340f815F3fDE4856AD59e98";
 let migrator;
 let uniswapRouter;
-let uniswapRouterAddress;// = "0x7a250d5630b4cf539739df2c5dacb4c659f2488d";
+let uniswapRouterAddress = "0x7a250d5630b4cf539739df2c5dacb4c659f2488d";
 let dmmRouter;
-let dmmRouterAddress;// = "0xbfFf5f2386080c11898A8a7d31431D7DCc317200";
+let dmmRouterAddress = "0xbfFf5f2386080c11898A8a7d31431D7DCc317200";
 
 let uniswapFactor;
 let pair;
 
 let dmmFactory;
 
-const wethAddress;// = "0xc778417e063141139fce010982780140aa0cd5ab";
-let testTokenAddress;// = "0x43d3526c459299938327ea8ED2dcCa5D79306fcF";
+const wethAddress = "0xc778417e063141139fce010982780140aa0cd5ab";
+let testTokenAddress = "0x43d3526c459299938327ea8ED2dcCa5D79306fcF";
 let testToken;
 
-let tokenWithFeeAddress;// = "0xa68E5299938f2137bCf1356d3741e958FE790D05";
+let tokenWithFeeAddress = "0xa68E5299938f2137bCf1356d3741e958FE790D05";
 let tokenWithFee;
 
 let deployer;
