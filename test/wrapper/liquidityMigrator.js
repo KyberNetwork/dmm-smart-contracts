@@ -599,20 +599,7 @@ contract('LiquidityMigrator', accounts => {
         "Ownable: caller is not the owner"
       );
 
-      await Helper.sendEtherWithPromise(accounts[0], migrator.address, new BN(1000));
-      await expectRevert(
-        migrator.withdrawFund(zeroAddress, new BN(10000) ),
-        "Migrator: TRANSFER_ETH_FAILED"
-      );
-
-      let balanceOwner = await Helper.getBalancePromise(accounts[0]);
-      await migrator.withdrawFund(zeroAddress, new BN(1000), { gasPrice: new BN(0)});
-      Helper.assertEqual(
-        0, await Helper.getBalancePromise(migrator.address)
-      );
-      Helper.assertEqual(
-        balanceOwner.add(new BN(1000)), await Helper.getBalancePromise(accounts[0])
-      );
+      let balanceOwner;
 
       let token = await TestToken.new("Test", "TST", new BN(100000));
       await token.transfer(migrator.address, new BN(1000));

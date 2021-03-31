@@ -121,8 +121,6 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
         dmmRouter = _dmmRouter;
     }
 
-    receive() external payable {}
-
     /**
     * @dev Use only for some special tokens
     */
@@ -223,7 +221,7 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
         {
             uint256 balanceTokenA = IERC20(tokenA).balanceOf(address(this));
             uint256 balanceTokenB = IERC20(tokenB).balanceOf(address(this));
-            (amountA, amountB) = _removeUniLiquidity(
+            _removeUniLiquidity(
                 uniPair, tokenA, tokenB, liquidity, amountAMin, amountBMin, deadline
             );
             amountA = IERC20(tokenA).balanceOf(address(this)).sub(balanceTokenA);
@@ -365,13 +363,12 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
         uint256 deadline
     )
         internal
-        returns (uint256 amountA, uint256 amountB)
     {
         require(deadline >= block.timestamp, "Migratior: EXPIRED");
         IERC20(pair).safeTransferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(address(this));
+        (uint256 amount0, uint256 amount1) = IUniswapV2Pair(pair).burn(address(this));
         (address token0,) = _sortTokens(tokenA, tokenB);
-        (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+        (uint256 amountA, uint256 amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
         require(amountA >= amountAMin, "Migratior: UNI_INSUFFICIENT_A_AMOUNT");
         require(amountB >= amountBMin, "Migratior: UNI_INSUFFICIENT_B_AMOUNT");
     }
