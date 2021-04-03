@@ -28,13 +28,21 @@ interface ILiquidityMigrator {
         uint32 poolAmp;
     }
 
-    event Migrated(
+    event RemoveLiquidity(
         address indexed tokenA,
         address indexed tokenB,
         address indexed uniPair,
         uint256 liquidity,
         uint256 amountA,
-        uint256 amountB,
+        uint256 amountB
+    );
+
+    event Migrated(
+        address indexed tokenA,
+        address indexed tokenB,
+        uint256 dmmAmountA,
+        uint256 dmmAmountB,
+        uint256 dmmLiquidity,
         PoolInfo info
     );
 
@@ -244,9 +252,9 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
         public
         override
         returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 addedLiquidity
+            uint256 dmmAmountA,
+            uint256 dmmAmountB,
+            uint256 dmmLiquidity
         )
     {
         // support for both normal token and token with fee on transfer
@@ -262,23 +270,25 @@ contract LiquidityMigrator is ILiquidityMigrator, Ownable {
                 amountBMin,
                 deadline
             );
-            amountA = IERC20(tokenA).balanceOf(address(this)).sub(balanceTokenA);
-            amountB = IERC20(tokenB).balanceOf(address(this)).sub(balanceTokenB);
-            require(amountA > 0 && amountB > 0, "Migrator: INVALID_AMOUNT");
+            dmmAmountA = IERC20(tokenA).balanceOf(address(this)).sub(balanceTokenA);
+            dmmAmountB = IERC20(tokenB).balanceOf(address(this)).sub(balanceTokenB);
+            require(dmmAmountA > 0 && dmmAmountB > 0, "Migrator: INVALID_AMOUNT");
+
+            emit RemoveLiquidity(tokenA, tokenB, uniPair, liquidity, dmmAmountA, dmmAmountB);
         }
 
-        (amountA, amountB, addedLiquidity) = _addLiquidityToDmmPool(
+        (dmmAmountA, dmmAmountB, dmmLiquidity) = _addLiquidityToDmmPool(
             tokenA,
             tokenB,
-            amountA,
-            amountB,
+            dmmAmountA,
+            dmmAmountB,
             dmmAmountAMin,
             dmmAmountBMin,
             poolInfo,
             deadline
         );
 
-        emit Migrated(tokenA, tokenB, uniPair, liquidity, amountA, amountB, poolInfo);
+        emit Migrated(tokenA, tokenB, dmmAmountA, dmmAmountB, dmmLiquidity, poolInfo);
     }
 
     /** @dev Allow the Owner to withdraw any funds that have been 'wrongly'

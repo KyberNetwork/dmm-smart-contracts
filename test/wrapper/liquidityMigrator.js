@@ -124,11 +124,15 @@ contract('LiquidityMigrator', accounts => {
     lpBalance,
     provider
   ) {
-    expectEvent(tx, 'Migrated', {
+    expectEvent(tx, 'RemoveLiquidity', {
       tokenA: tokenA,
       tokenB: tokenB,
       uniPair: await uniswapFactory.getPair(tokenA, tokenB),
       liquidity: liquidity
+    });
+    expectEvent(tx, 'Migrated', {
+      tokenA: tokenA,
+      tokenB: tokenB
     });
     if (poolAddress == zeroAddress) {
       // verify new pool has been created
