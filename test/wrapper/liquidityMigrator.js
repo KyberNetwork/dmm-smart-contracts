@@ -20,7 +20,7 @@ const UniswapV2Factory = Helper.getTruffleContract('./node_modules/@uniswap/v2-c
 const UniswapV2Router = Helper.getTruffleContract('./node_modules/@uniswap/v2-periphery/build/UniswapV2Router02.json');
 
 const deadline = new BN(2).pow(new BN(255));
-const zeroAddress = "0x0000000000000000000000000000000000000000";
+const zeroAddress = '0x0000000000000000000000000000000000000000';
 
 let feeToken;
 let normalToken;
@@ -53,8 +53,10 @@ contract('LiquidityMigrator', accounts => {
   });
 
   before('setup dmmFactory and dmmRouter', async () => {
-    feeToken = await FeeToken.new('feeOnTransfer Token', 'FOT', expandTo18Decimals(1000000), { from: liquidityProvider });
-    normalToken = await TestToken.new('test', 't1', expandTo18Decimals(1000000), { from: liquidityProvider });
+    feeToken = await FeeToken.new('feeOnTransfer Token', 'FOT', expandTo18Decimals(1000000), {
+      from: liquidityProvider
+    });
+    normalToken = await TestToken.new('test', 't1', expandTo18Decimals(1000000), {from: liquidityProvider});
 
     dmmFactory = await DMMFactory.new(feeSetter);
     dmmRouter = await DMMRouter02.new(dmmFactory.address, weth.address);
@@ -64,31 +66,33 @@ contract('LiquidityMigrator', accounts => {
 
     migrator = await LiquidityMigrator.new(dmmRouter.address);
 
-    await approveAllowance(
-      [weth, feeToken, normalToken], uniswapRouter.address, deadline, liquidityProvider
-    );
-    await approveAllowance(
-      [weth, feeToken, normalToken], dmmRouter.address, deadline, liquidityProvider
-    );
+    await approveAllowance([weth, feeToken, normalToken], uniswapRouter.address, deadline, liquidityProvider);
+    await approveAllowance([weth, feeToken, normalToken], dmmRouter.address, deadline, liquidityProvider);
 
-    await weth.deposit({ value: expandTo18Decimals(5), from: liquidityProvider });
+    await weth.deposit({value: expandTo18Decimals(5), from: liquidityProvider});
 
     // add weth - normal token
     await addLiquidity(
-      weth.address, normalToken.address,
-      expandTo18Decimals(1), expandTo18Decimals(1000),
+      weth.address,
+      normalToken.address,
+      expandTo18Decimals(1),
+      expandTo18Decimals(1000),
       liquidityProvider
     );
     // add weth - fee token
     await addLiquidity(
-      weth.address, feeToken.address,
-      expandTo18Decimals(1), expandTo18Decimals(1500),
+      weth.address,
+      feeToken.address,
+      expandTo18Decimals(1),
+      expandTo18Decimals(1500),
       liquidityProvider
     );
     // add normal token - fee token
     await addLiquidity(
-      normalToken.address, feeToken.address,
-      expandTo18Decimals(1200), expandTo18Decimals(15000),
+      normalToken.address,
+      feeToken.address,
+      expandTo18Decimals(1200),
+      expandTo18Decimals(15000),
       liquidityProvider
     );
 
@@ -97,19 +101,29 @@ contract('LiquidityMigrator', accounts => {
   });
 
   async function approveAllowance (tokens, spender, amount, user) {
-    for(let i = 0; i < tokens.length; i++) {
-      await tokens[i].approve(spender, amount, { from: user });
+    for (let i = 0; i < tokens.length; i++) {
+      await tokens[i].approve(spender, amount, {from: user});
     }
   }
 
   async function addLiquidity (tokenA, tokenB, amountA, amountB, liquidityProvider) {
-    await uniswapRouter.addLiquidity(
-      tokenA, tokenB, amountA, amountB, 0, 0, liquidityProvider, deadline,
-      { from: liquidityProvider }
-    );
+    await uniswapRouter.addLiquidity(tokenA, tokenB, amountA, amountB, 0, 0, liquidityProvider, deadline, {
+      from: liquidityProvider
+    });
   }
 
-  async function verifyMigrateEventAndData (tx, tokenA, tokenB, liquidity, ampBps, poolAddress, poolLength, lpToken, lpBalance, provider) {
+  async function verifyMigrateEventAndData (
+    tx,
+    tokenA,
+    tokenB,
+    liquidity,
+    ampBps,
+    poolAddress,
+    poolLength,
+    lpToken,
+    lpBalance,
+    provider
+  ) {
     expectEvent(tx, 'Migrated', {
       tokenA: tokenA,
       tokenB: tokenB,
@@ -123,14 +137,9 @@ contract('LiquidityMigrator', accounts => {
       Helper.assertEqual(ampBps, await (await DMMPool.at(pool)).ampBps());
     } else {
       // no new pool added
-      Helper.assertEqual(
-        poolLength, await dmmFactory.getPoolsLength(tokenA, tokenB)
-      );
+      Helper.assertEqual(poolLength, await dmmFactory.getPoolsLength(tokenA, tokenB));
     }
-    Helper.assertEqual(
-      lpBalance.sub(liquidity),
-      await lpToken.balanceOf(provider)
-    );
+    Helper.assertEqual(lpBalance.sub(liquidity), await lpToken.balanceOf(provider));
   }
 
   async function getSharesFromPool (poolAddress, tokenA, tokenB, user) {
@@ -144,14 +153,10 @@ contract('LiquidityMigrator', accounts => {
     return [balTokenA, balTokenB];
   }
 
-  let testSuites = [
-    'weth - normal token',
-    'weth - fee token',
-    'normal token - fee token',
-  ];
+  let testSuites = ['weth - normal token', 'weth - fee token', 'normal token - fee token'];
   let feeOnTransfer = [false, true, true];
 
-  for(let i = 0; i < testSuites.length; i++) {
+  for (let i = 0; i < testSuites.length; i++) {
     describe(`#migrateLpToDmmPool - ${testSuites[i]}`, async () => {
       before('set data', async () => {
         token0 = token0s[i];
@@ -159,9 +164,7 @@ contract('LiquidityMigrator', accounts => {
       });
 
       it('migrate to new pool', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -175,20 +178,30 @@ contract('LiquidityMigrator', accounts => {
           token0.address,
           token1.address,
           liquidity,
-          0, 0,
+          0,
+          0,
+          0,
+          0,
           [zeroAddress, 12345],
           deadline,
-          { from: liquidityProvider }
+          {from: liquidityProvider}
         );
         await verifyMigrateEventAndData(
-          tx, token0.address, token1.address, liquidity, 12345, zeroAddress, poolLength, lpToken, lpBalance, liquidityProvider
+          tx,
+          token0.address,
+          token1.address,
+          liquidity,
+          12345,
+          zeroAddress,
+          poolLength,
+          lpToken,
+          lpBalance,
+          liquidityProvider
         );
       });
 
       it('migrate to existing pool', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -203,10 +216,18 @@ contract('LiquidityMigrator', accounts => {
         } else {
           // add new pool to dmm router
           await dmmRouter.addLiquidityNewPool(
-            token0.address, token1.address, 12345,
-            new BN(10000), new BN(12000), 0, 0,
-            liquidityProvider, deadline,
-            { from: liquidityProvider }
+            token0.address,
+            token1.address,
+            12345,
+            new BN(10000),
+            new BN(12000),
+            0,
+            0,
+            0,
+            0,
+            liquidityProvider,
+            deadline,
+            {from: liquidityProvider}
           );
           dmmPools = await dmmFactory.getPools(token0.address, token1.address);
           poolAddress = dmmPools[0];
@@ -218,20 +239,30 @@ contract('LiquidityMigrator', accounts => {
           token0.address,
           token1.address,
           liquidity,
-          0, 0,
+          0,
+          0,
+          0,
+          0,
           [poolAddress, 0],
           deadline,
-          { from: liquidityProvider }
+          {from: liquidityProvider}
         );
         await verifyMigrateEventAndData(
-          tx, token0.address, token1.address, liquidity, 0, poolAddress, poolLength, lpToken, lpBalance, liquidityProvider
+          tx,
+          token0.address,
+          token1.address,
+          liquidity,
+          0,
+          poolAddress,
+          poolLength,
+          lpToken,
+          lpBalance,
+          liquidityProvider
         );
       });
 
       it('reverts invalid min amounts when removing liquidity', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -251,12 +282,15 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            token0Amount.add(new BN(1)), 0,
+            token0Amount.add(new BN(1)),
+            liquidity,
+            token0Amount.add(new BN(1)),
+            0,
             [zeroAddress, 12345],
             deadline,
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           ),
-          "Migratior: UNI_INSUFFICIENT_A_AMOUNT"
+          'Migratior: UNI_INSUFFICIENT_A_AMOUNT'
         );
         await expectRevert.unspecified(
           migrator.migrateLpToDmmPool(
@@ -264,19 +298,20 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            0, token1Amount.add(new BN(1)),
+            0,
+            token1Amount.add(new BN(1)),
+            0,
+            token1Amount.add(new BN(1)),
             [zeroAddress, 12345],
             deadline,
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           ),
-          "Migratior: UNI_INSUFFICIENT_B_AMOUNT"
+          'Migratior: UNI_INSUFFICIENT_B_AMOUNT'
         );
       });
 
       it('reverts invalid min amounts when adding liquidity', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -299,18 +334,19 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            token0Amount, token1Amount,
+            token0Amount,
+            token1Amount,
+            token0Amount,
+            token1Amount,
             [zeroAddress, 12345],
             deadline,
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           )
         );
       });
 
       it('reverts wrong token or wrong pool', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -333,18 +369,19 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token0.address,
             liquidity,
-            token0Amount, token1Amount,
+            token0Amount,
+            token1Amount,
+            token0Amount,
+            token1Amount,
             [zeroAddress, 12345],
             deadline,
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           )
         );
       });
 
       it('reverts expired', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -367,12 +404,15 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            token0Amount, token1Amount,
+            token0Amount,
+            token1Amount,
+            token0Amount,
+            token1Amount,
             [zeroAddress, 12345],
             new BN(0),
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           ),
-          "Migratior: EXPIRED"
+          'Migratior: EXPIRED'
         );
       });
     });
@@ -390,10 +430,10 @@ contract('LiquidityMigrator', accounts => {
       deadline
     );
     const {v, r, s} = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(liquidityProviderPkKey.slice(2), 'hex'));
-    return { v: v, r: r, s: s }
+    return {v: v, r: r, s: s};
   }
 
-  for(let i = 0; i < testSuites.length; i++) {
+  for (let i = 0; i < testSuites.length; i++) {
     describe(`#migrateLpToDmmPoolWithPermit - ${testSuites[i]}`, async () => {
       before('set data', async () => {
         token0 = token0s[i];
@@ -401,9 +441,7 @@ contract('LiquidityMigrator', accounts => {
       });
 
       it('migrate to new pool', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -418,22 +456,32 @@ contract('LiquidityMigrator', accounts => {
           token0.address,
           token1.address,
           liquidity,
-          0, 0,
+          0,
+          0,
+          0,
+          0,
           [zeroAddress, 12345],
           deadline,
           [true, data.v, data.r, data.s],
-          { from: liquidityProvider }
+          {from: liquidityProvider}
         );
         await verifyMigrateEventAndData(
-          tx, token0.address, token1.address, liquidity, 12345, zeroAddress, poolLength, lpToken, lpBalance, liquidityProvider
+          tx,
+          token0.address,
+          token1.address,
+          liquidity,
+          12345,
+          zeroAddress,
+          poolLength,
+          lpToken,
+          lpBalance,
+          liquidityProvider
         );
         Helper.assertGreater(await lpToken.allowance(liquidityProvider, migrator.address), new BN(0));
       });
 
       it('migrate to existing pool', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -450,10 +498,16 @@ contract('LiquidityMigrator', accounts => {
         } else {
           // add new pool to dmm router
           await dmmRouter.addLiquidityNewPool(
-            token0.address, token1.address, 12345,
-            new BN(10000), new BN(12000), 0, 0,
-            liquidityProvider, deadline,
-            { from: liquidityProvider }
+            token0.address,
+            token1.address,
+            12345,
+            new BN(1),
+            new BN(12000),
+            0,
+            0,
+            liquidityProvider,
+            deadline,
+            {from: liquidityProvider}
           );
           dmmPools = await dmmFactory.getPools(token0.address, token1.address);
           poolAddress = dmmPools[0];
@@ -465,22 +519,32 @@ contract('LiquidityMigrator', accounts => {
           token0.address,
           token1.address,
           liquidity,
-          0, 0,
+          0,
+          0,
+          0,
+          0,
           [poolAddress, 0],
           deadline,
           [false, data.v, data.r, data.s],
-          { from: liquidityProvider }
+          {from: liquidityProvider}
         );
         await verifyMigrateEventAndData(
-          tx, token0.address, token1.address, liquidity, 0, poolAddress, poolLength, lpToken, lpBalance, liquidityProvider
+          tx,
+          token0.address,
+          token1.address,
+          liquidity,
+          0,
+          poolAddress,
+          poolLength,
+          lpToken,
+          lpBalance,
+          liquidityProvider
         );
         Helper.assertEqual(await lpToken.allowance(liquidityProvider, migrator.address), new BN(0));
       });
 
       it('reverts invalid min amounts when removing liquidity', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -502,11 +566,14 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            token0Amount.add(new BN(1)), 0,
+            token0Amount.add(new BN(1)),
+            0,
+            0,
+            0,
             [zeroAddress, 12345],
             deadline,
             [true, data.v, data.r, data.s],
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           )
         );
         await expectRevert.unspecified(
@@ -515,19 +582,20 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            0, token1Amount.add(new BN(1)),
+            0,
+            token1Amount.add(new BN(1)),
+            0,
+            token1Amount.add(new BN(1)),
             [zeroAddress, 12345],
             deadline,
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           )
         );
         Helper.assertEqual(await lpToken.allowance(liquidityProvider, migrator.address), new BN(0));
       });
 
       it('reverts invalid min amounts when adding liquidity', async () => {
-        let lpToken = await TestToken.at(
-          await uniswapFactory.getPair(token0.address, token1.address)
-        );
+        let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
         let lpBalance = await lpToken.balanceOf(liquidityProvider);
 
         let liquidity = new BN(lpBalance).div(new BN(10));
@@ -551,11 +619,14 @@ contract('LiquidityMigrator', accounts => {
             token0.address,
             token1.address,
             liquidity,
-            token0Amount, token1Amount,
+            token0Amount,
+            token1Amount,
+            token0Amount,
+            token1Amount,
             [zeroAddress, 12345],
             deadline,
             [false, data.v, data.r, data.s],
-            { from: liquidityProvider }
+            {from: liquidityProvider}
           )
         );
         Helper.assertEqual(await lpToken.allowance(liquidityProvider, migrator.address), new BN(0));
@@ -563,24 +634,88 @@ contract('LiquidityMigrator', accounts => {
     });
   }
 
+  describe('special case: rate between 2 pools are different', async () => {
+    before('set data', async () => {
+      token0 = token0s[0];
+      token1 = token1s[0];
+    });
+
+    it('migrate extract token', async () => {
+      let lpToken = await TestToken.at(await uniswapFactory.getPair(token0.address, token1.address));
+      let lpBalance = await lpToken.balanceOf(liquidityProvider);
+
+      let liquidity = new BN(lpBalance).div(new BN(10));
+
+      let totalSupply = await lpToken.totalSupply();
+      let token0Amount = (await token0.balanceOf(lpToken.address)).mul(liquidity).div(totalSupply);
+      let token1Amount = (await token1.balanceOf(lpToken.address)).mul(liquidity).div(totalSupply);
+
+      await dmmRouter.addLiquidityNewPool(
+        token0.address,
+        token1.address,
+        12345,
+        Helper.expandTo18Decimals(1),
+        Helper.expandTo18Decimals(2000),
+        0,
+        0,
+        liquidityProvider,
+        deadline,
+        {from: liquidityProvider}
+      );
+      dmmPools = await dmmFactory.getPools(token0.address, token1.address);
+      poolAddress = dmmPools[dmmPools.length - 1];
+      console.log(poolAddress);
+
+      // reset allowance
+      await approveAllowance([lpToken], migrator.address, 0, liquidityProvider);
+      const data = await getPermitData(lpToken, liquidity, false, deadline);
+
+      let tx = await migrator.migrateLpToDmmPoolWithPermit(
+        lpToken.address,
+        token0.address,
+        token1.address,
+        liquidity,
+        token0Amount,
+        token1Amount,
+        token1Amount.div(new BN(2000)),
+        token1Amount,
+        [poolAddress, new BN(0)],
+        deadline,
+        [false, data.v, data.r, data.s],
+        {from: liquidityProvider}
+      );
+      Helper.assertEqual(await lpToken.allowance(liquidityProvider, migrator.address), new BN(0));
+
+      await verifyMigrateEventAndData(
+        tx,
+        token0.address,
+        token1.address,
+        liquidity,
+        12345,
+        lpToken.address,
+        new BN(dmmPools.length),
+        lpToken,
+        lpBalance,
+        liquidityProvider
+      );
+    });
+  });
+
   describe('#manual approve', async () => {
     it('test manual approve', async () => {
       let tokens = [weth.address, normalToken.address];
       let spenders = [accounts[1], accounts[2]];
       let amounts = [new BN(10000), new BN(0)];
 
-      for(let i = 0; i < amounts.length; i++) {
+      for (let i = 0; i < amounts.length; i++) {
         await expectRevert(
-          migrator.manualApproveAllowance(
-            tokens, spenders, amounts[i],
-            { from: accounts[7] }
-          ),
-          "Ownable: caller is not the owner"
+          migrator.manualApproveAllowance(tokens, spenders, amounts[i], {from: accounts[7]}),
+          'Ownable: caller is not the owner'
         );
 
         await migrator.manualApproveAllowance(tokens, spenders, amounts[i]);
-        for(let j = 0; j < tokens.length; j++) {
-          for(let k = 0; k < spenders.length; k++) {
+        for (let j = 0; j < tokens.length; j++) {
+          for (let k = 0; k < spenders.length; k++) {
             Helper.assertEqual(
               amounts[i],
               await (await TestToken.at(tokens[j])).allowance(migrator.address, spenders[k])
@@ -595,35 +730,26 @@ contract('LiquidityMigrator', accounts => {
     it('test withdraw', async () => {
       migrator = await LiquidityMigrator.new(accounts[2]);
       await expectRevert(
-        migrator.withdrawFund(zeroAddress, 0, { from: accounts[2] }),
-        "Ownable: caller is not the owner"
+        migrator.withdrawFund(zeroAddress, 0, {from: accounts[2]}),
+        'Ownable: caller is not the owner'
       );
 
       let balanceOwner;
 
-      let token = await TestToken.new("Test", "TST", new BN(100000));
+      let token = await TestToken.new('Test', 'TST', new BN(100000));
       await token.transfer(migrator.address, new BN(1000));
-      await expectRevert.unspecified(
-        migrator.withdrawFund(token.address, new BN(10000))
-      );
+      await expectRevert.unspecified(migrator.withdrawFund(token.address, new BN(10000)));
 
       balanceOwner = await token.balanceOf(accounts[0]);
-      await migrator.withdrawFund(token.address, new BN(1000), { gasPrice: new BN(0)});
-      Helper.assertEqual(
-        0, await token.balanceOf(migrator.address)
-      );
-      Helper.assertEqual(
-        balanceOwner.add(new BN(1000)), await token.balanceOf(accounts[0])
-      );
+      await migrator.withdrawFund(token.address, new BN(1000), {gasPrice: new BN(0)});
+      Helper.assertEqual(0, await token.balanceOf(migrator.address));
+      Helper.assertEqual(balanceOwner.add(new BN(1000)), await token.balanceOf(accounts[0]));
     });
   });
 
   describe('#constrcutor', async () => {
     it('test constructor', async () => {
-      await expectRevert(
-        LiquidityMigrator.new(zeroAddress),
-        "Migrator: INVALID_ROUTER"
-      );
+      await expectRevert(LiquidityMigrator.new(zeroAddress), 'Migrator: INVALID_ROUTER');
       let _migrator = await LiquidityMigrator.new(accounts[2]);
       Helper.assertEqual(accounts[2], await _migrator.dmmRouter());
     });
@@ -633,7 +759,7 @@ contract('LiquidityMigrator', accounts => {
 async function getApprovalDigest (token, owner, spender, value, nonce, deadline) {
   const domainSeparator = await token.DOMAIN_SEPARATOR();
 
-  const PERMIT_TYPEHASH = "0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9";
+  const PERMIT_TYPEHASH = '0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9';
   const tmp = web3.utils.soliditySha3(
     web3.eth.abi.encodeParameters(
       ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
