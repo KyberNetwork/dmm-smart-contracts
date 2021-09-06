@@ -187,6 +187,30 @@ if (MATIC_VIGIL_KEY != undefined && PRIVATE_KEY != undefined) {
   };
 }
 
+module.exports.networks.bsctestnet = {
+  url: `https://data-seed-prebsc-1-s2.binance.org:8545/`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000
+};
+
+module.exports.networks.bsc = {
+  url: `https://bsc-dataseed1.ninicoin.io/`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000
+};
+
+module.exports.networks.avaxtestnet = {
+  url: `https://api.avax-test.network/ext/bc/C/rpc`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000
+};
+
+module.exports.networks.avax = {
+  url: `https://api.avax.network/ext/bc/C/rpc`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000
+};
+
 if (process.env.ETHERSCAN_API_KEY != undefined) {
   module.exports.etherscan = {
     // Your API key for Etherscan
