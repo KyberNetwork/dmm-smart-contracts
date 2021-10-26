@@ -211,6 +211,12 @@ module.exports.networks.avax = {
   timeout: 20000
 };
 
+module.exports.networks.fantom = {
+  url: `https://rpc.ftm.tools/`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000
+}
+
 if (process.env.ETHERSCAN_API_KEY != undefined) {
   module.exports.etherscan = {
     // Your API key for Etherscan
