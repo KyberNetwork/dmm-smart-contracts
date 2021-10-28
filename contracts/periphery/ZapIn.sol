@@ -92,7 +92,33 @@ contract ZapIn {
         tokenOut.safeTransfer(pool, amountOutput);
 
         lpQty = IDMMPool(pool).mint(msg.sender);
-        require(lpQty >= minLpQty, "DMMRouter: INSUFFICIENT_MINT_QTY");
+        require(lpQty >= minLpQty, "INSUFFICIENT_MINT_QTY");
+    }
+
+    function zapOut(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 liquidity,
+        address pool,
+        address to,
+        uint256 minTokenOut,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 amountOut) {
+        amountOut = _zapOut(tokenIn, tokenOut, liquidity, pool, minTokenOut);
+        tokenOut.safeTransfer(to, amountOut);
+    }
+
+    function zapOutEth(
+        IERC20 tokenIn,
+        uint256 liquidity,
+        address pool,
+        address to,
+        uint256 minTokenOut,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 amountOut) {
+        amountOut = _zapOut(tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
+        IWETH(weth).withdraw(amountOut);
+        TransferHelper.safeTransferETH(to, amountOut);
     }
 
     function calculateZapInAmounts(
@@ -106,89 +132,13 @@ contract ZapIn {
         tokenInAmount = userIn.sub(amountSwap);
     }
 
-    function addLiquidity(
-        IERC20 tokenA,
-        IERC20 tokenB,
-        address pool,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        uint256[2] memory vReserveRatioBounds,
-        address to,
-        uint256 deadline
-    )
-        public
-        virtual
-        ensure(deadline)
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        )
-    {
-        (amountA, amountB) = _addLiquidity(
-            tokenA,
-            tokenB,
-            pool,
-            amountADesired,
-            amountBDesired,
-            amountAMin,
-            amountBMin,
-            vReserveRatioBounds
-        );
-        // using tokenA.safeTransferFrom will get "Stack too deep"
-        SafeERC20.safeTransferFrom(tokenA, msg.sender, pool, amountA);
-        SafeERC20.safeTransferFrom(tokenB, msg.sender, pool, amountB);
-        liquidity = IDMMPool(pool).mint(to);
-    }
-
-    function addLiquidityETH(
-        IERC20 token,
-        address pool,
-        uint256 amountTokenDesired,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        uint256[2] memory vReserveRatioBounds,
-        address to,
-        uint256 deadline
-    )
-        public
-        payable
-        ensure(deadline)
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        )
-    {
-        (amountToken, amountETH) = _addLiquidity(
-            token,
-            IERC20(weth),
-            pool,
-            amountTokenDesired,
-            msg.value,
-            amountTokenMin,
-            amountETHMin,
-            vReserveRatioBounds
-        );
-        token.safeTransferFrom(msg.sender, pool, amountToken);
-        IWETH(weth).deposit{value: amountETH}();
-        IERC20(weth).safeTransfer(pool, amountETH);
-        liquidity = IDMMPool(pool).mint(to);
-        // refund dust eth, if any
-        if (msg.value > amountETH) {
-            TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
-        }
-    }
-
     function calculateSwapAmounts(
         IERC20 tokenIn,
         IERC20 tokenOut,
         address pool,
         uint256 userIn
     ) public view returns (uint256 amountSwap, uint256 amountOutput) {
-        require(factory.isPool(tokenIn, tokenOut, pool), "DMMRouter: INVALID_POOL");
+        require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
         (uint256 rIn, uint256 rOut, uint256 vIn, uint256 vOut, uint256 feeInPrecision) = DMMLibrary
             .getTradeInfo(pool, tokenIn, tokenOut);
         amountSwap = _calculateSwapInAmount(rIn, rOut, vIn, vOut, feeInPrecision, userIn);
@@ -209,38 +159,36 @@ contract ZapIn {
         IDMMPool(pool).swap(amount0Out, amount1Out, to, new bytes(0));
     }
 
-    function _addLiquidity(
-        IERC20 tokenA,
-        IERC20 tokenB,
+    function _zapOut(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 liquidity,
         address pool,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        uint256[2] memory vReserveRatioBounds
-    ) internal virtual view returns (uint256 amountA, uint256 amountB) {
-        require(factory.isPool(tokenA, tokenB, pool), "DMMRouter: INVALID_POOL");
-        (uint256 reserveA, uint256 reserveB, uint256 vReserveA, uint256 vReserveB, ) = DMMLibrary
-            .getTradeInfo(pool, tokenA, tokenB);
-        if (reserveA == 0 && reserveB == 0) {
-            (amountA, amountB) = (amountADesired, amountBDesired);
-        } else {
-            uint256 amountBOptimal = DMMLibrary.quote(amountADesired, reserveA, reserveB);
-            if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, "DMMRouter: INSUFFICIENT_B_AMOUNT");
-                (amountA, amountB) = (amountADesired, amountBOptimal);
-            } else {
-                uint256 amountAOptimal = DMMLibrary.quote(amountBDesired, reserveB, reserveA);
-                assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, "DMMRouter: INSUFFICIENT_A_AMOUNT");
-                (amountA, amountB) = (amountAOptimal, amountBDesired);
-            }
-            uint256 currentRate = (vReserveB * Q112) / vReserveA;
-            require(
-                currentRate >= vReserveRatioBounds[0] && currentRate <= vReserveRatioBounds[1],
-                "DMMRouter: OUT_OF_BOUNDS_VRESERVE"
-            );
+        uint256 minTokenOut
+    ) internal returns (uint256 amountOut) {
+        uint256 amountIn;
+        {
+            require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
+            IERC20(pool).safeTransferFrom(msg.sender, pool, liquidity); // send liquidity to pool
+            (uint256 amount0, uint256 amount1) = IDMMPool(pool).burn(address(this));
+            (IERC20 token0, ) = DMMLibrary.sortTokens(tokenIn, tokenOut);
+            (amountIn, amountOut) = tokenIn == token0 ? (amount0, amount1) : (amount1, amount0);
         }
+        uint256 swapAmount;
+        {
+            (
+                uint256 rIn,
+                uint256 rOut,
+                uint256 vIn,
+                uint256 vOut,
+                uint256 feeInPrecision
+            ) = DMMLibrary.getTradeInfo(pool, tokenIn, tokenOut);
+            swapAmount = DMMLibrary.getAmountOut(amountIn, rIn, rOut, vIn, vOut, feeInPrecision);
+        }
+        tokenIn.safeTransfer(pool, amountIn);
+        _swap(swapAmount, tokenIn, tokenOut, pool, address(this));
+        amountOut += swapAmount;
+        require(amountOut >= minTokenOut, "INSUFFICIENT_OUTPUT_AMOUNT");
     }
 
     function _calculateSwapInAmount(

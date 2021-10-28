@@ -74,5 +74,16 @@ contract('ZapIn', accounts => {
   it('#zapInEth', async () => {
     let userIn = Helper.expandTo18Decimals(3);
     await zapIn.zapInEth(token.address, pool.address, 1, MaxUint256, {from: accounts[1], value: userIn});
+    Helper.assertGreater(await pool.balanceOf(accounts[1]), new BN(0));
+  });
+
+  it('#zapOut', async () => {
+    let userIn = Helper.expandTo18Decimals(3);
+    await zapIn.zapInEth(token.address, pool.address, 1, MaxUint256, {from: accounts[1], value: userIn});
+
+    await pool.approve(zapIn.address, MaxUint256, {from: accounts[1]});
+
+    let liquidity = await pool.balanceOf(accounts[1]);
+    await zapIn.zapOutEth(token.address, liquidity, pool.address, accounts[1], 1, MaxUint256, {from: accounts[1]});
   });
 });
