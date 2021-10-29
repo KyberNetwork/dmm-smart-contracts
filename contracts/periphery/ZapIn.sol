@@ -19,7 +19,7 @@ contract ZapIn {
     uint256 private constant PRECISION = 1e18;
     uint256 internal constant Q112 = 2**112;
 
-    IDMMFactory public factory;
+    IDMMFactory public immutable factory;
     address public immutable weth;
 
     modifier ensure(uint256 deadline) {
@@ -199,7 +199,6 @@ contract ZapIn {
         uint256 feeInPrecision,
         uint256 userIn
     ) internal pure returns (uint256) {
-        require(feeInPrecision < PRECISION, "invalid feeInPrecision");
         uint256 r = PRECISION - feeInPrecision;
         // b = (vOut * rIn + userIn * (vOut - rOut)) * r / PRECISION / rOut+ vIN
         uint256 b;
@@ -211,7 +210,7 @@ contract ZapIn {
         }
         uint256 inverseC = vIn.mul(userIn);
         // numerator = sqrt(b^2 -4ac) - b
-        uint256 numerator = MathExt.sqrt(b.mul(b).add(inverseC.mul(4).mul(r) / PRECISION)).sub(b);
+        uint256 numerator = MathExt.sqrt(b.mul(b).add(inverseC.mul(4 * r) / PRECISION)).sub(b);
         return numerator.mul(PRECISION) / (2 * r);
     }
 }
