@@ -10,6 +10,7 @@ import "../libraries/DMMLibrary.sol";
 import "../interfaces/IDMMPool.sol";
 import "../interfaces/IDMMFactory.sol";
 import "../interfaces/IWETH.sol";
+import "../interfaces/IERC20Permit.sol";
 
 /// @dev detail here: https://hackmd.io/vdqxJx8STNqPm0LG8vGWaw
 contract ZapIn {
@@ -44,6 +45,7 @@ contract ZapIn {
     function zapInEth(
         IERC20 tokenOut,
         address pool,
+        address to,
         uint256 minLpQty,
         uint256 deadline
     ) external payable ensure(deadline) returns (uint256 lpQty) {
@@ -60,7 +62,7 @@ contract ZapIn {
         IERC20(weth).safeTransfer(pool, msg.value.sub(amountSwap));
         tokenOut.safeTransfer(pool, amountOutput);
 
-        lpQty = IDMMPool(pool).mint(msg.sender);
+        lpQty = IDMMPool(pool).mint(to);
         require(lpQty >= minLpQty, "DMMRouter: INSUFFICIENT_MINT_QTY");
     }
 
@@ -76,6 +78,7 @@ contract ZapIn {
         IERC20 tokenOut,
         uint256 userIn,
         address pool,
+        address to,
         uint256 minLpQty,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 lpQty) {
@@ -91,7 +94,7 @@ contract ZapIn {
         tokenIn.safeTransferFrom(msg.sender, pool, userIn.sub(amountSwap));
         tokenOut.safeTransfer(pool, amountOutput);
 
-        lpQty = IDMMPool(pool).mint(msg.sender);
+        lpQty = IDMMPool(pool).mint(to);
         require(lpQty >= minLpQty, "INSUFFICIENT_MINT_QTY");
     }
 
@@ -108,6 +111,25 @@ contract ZapIn {
         tokenOut.safeTransfer(to, amountOut);
     }
 
+    function zapOutPermit(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 liquidity,
+        address pool,
+        address to,
+        uint256 minTokenOut,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external ensure(deadline) returns (uint256 amountOut) {
+        uint256 value = approveMax ? uint256(-1) : liquidity;
+        IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
+        amountOut = _zapOut(tokenIn, tokenOut, liquidity, pool, minTokenOut);
+        tokenOut.safeTransfer(to, amountOut);
+    }
+
     function zapOutEth(
         IERC20 tokenIn,
         uint256 liquidity,
@@ -116,6 +138,25 @@ contract ZapIn {
         uint256 minTokenOut,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 amountOut) {
+        amountOut = _zapOut(tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
+        IWETH(weth).withdraw(amountOut);
+        TransferHelper.safeTransferETH(to, amountOut);
+    }
+
+    function zapOutEthPermit(
+        IERC20 tokenIn,
+        uint256 liquidity,
+        address pool,
+        address to,
+        uint256 minTokenOut,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountOut) {
+        uint256 value = approveMax ? uint256(-1) : liquidity;
+        IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountOut = _zapOut(tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
