@@ -24,6 +24,8 @@ contract('ZapIn', accounts => {
     weth = await WETH.new();
 
     let factory = await DMMFactory.new(accounts[0]);
+    await factory.setFeeConfiguration(accounts[1], new BN(1000));
+
     let router = await DMMRouter.new(factory.address, weth.address);
     // set up pool with 100 token and 30 eth
     await token.approve(router.address, MaxUint256);
@@ -85,7 +87,16 @@ contract('ZapIn', accounts => {
     await pool.approve(zapIn.address, MaxUint256, {from: accounts[1]});
 
     let liquidity = await pool.balanceOf(accounts[1]);
-    await zapIn.zapOutEth(token.address, liquidity, pool.address, accounts[1], 1, MaxUint256, {from: accounts[1]});
+
+    let zapOutAmount = await zapIn.calculateZapOutAmount(token.address, weth.address, pool.address, liquidity);
+
+    let beforeBalance = await Helper.getBalancePromise(accounts[1]);
+    await zapIn.zapOutEth(token.address, liquidity, pool.address, accounts[1], 1, MaxUint256, {
+      from: accounts[1],
+      gasPrice: new BN(0)
+    });
+    let afterBalance = await Helper.getBalancePromise(accounts[1]);
+    Helper.assertEqual(afterBalance.sub(beforeBalance), zapOutAmount, 'unexpected zapOut amout');
   });
 
   it('#zapOutPermit', async () => {
@@ -94,7 +105,10 @@ contract('ZapIn', accounts => {
     const liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
 
     let userIn = Helper.expandTo18Decimals(3);
-    await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {from: liquidityProvider, value: userIn});
+    await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {
+      from: liquidityProvider,
+      value: userIn
+    });
 
     const liquidity = await pool.balanceOf(liquidityProvider);
 
@@ -133,7 +147,10 @@ contract('ZapIn', accounts => {
     const liquidityProviderPkKey = '0xee9d129c1997549ee09c0757af5939b2483d80ad649a0eda68e8b0357ad11131';
 
     let userIn = Helper.expandTo18Decimals(3);
-    await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {from: liquidityProvider, value: userIn});
+    await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {
+      from: liquidityProvider,
+      value: userIn
+    });
 
     const liquidity = await pool.balanceOf(liquidityProvider);
 

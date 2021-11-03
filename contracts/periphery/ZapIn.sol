@@ -3,6 +3,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "../libraries/MathExt.sol";
@@ -16,6 +17,14 @@ import "../interfaces/IERC20Permit.sol";
 contract ZapIn {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
+
+    struct ReserveData {
+        uint256 rIn;
+        uint256 rOut;
+        uint256 vIn;
+        uint256 vOut;
+        uint256 feeInPrecision;
+    }
 
     uint256 private constant PRECISION = 1e18;
     uint256 internal constant Q112 = 2**112;
@@ -173,6 +182,30 @@ contract ZapIn {
         tokenInAmount = userIn.sub(amountSwap);
     }
 
+    function calculateZapOutAmount(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address pool,
+        uint256 lpQty
+    ) external view returns (uint256) {
+        require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
+        (uint256 amountIn, uint256 amountOut, ReserveData memory data) = _calculateBurnAmount(
+            pool,
+            tokenIn,
+            tokenOut,
+            lpQty
+        );
+        amountOut += DMMLibrary.getAmountOut(
+            amountIn,
+            data.rIn,
+            data.rOut,
+            data.vIn,
+            data.vOut,
+            data.feeInPrecision
+        );
+        return amountOut;
+    }
+
     function calculateSwapAmounts(
         IERC20 tokenIn,
         IERC20 tokenOut,
@@ -230,6 +263,65 @@ contract ZapIn {
         _swap(swapAmount, tokenIn, tokenOut, pool, address(this));
         amountOut += swapAmount;
         require(amountOut >= minTokenOut, "INSUFFICIENT_OUTPUT_AMOUNT");
+    }
+
+    function _calculateBurnAmount(
+        address pool,
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 lpQty
+    )
+        internal
+        view
+        returns (
+            uint256 amountIn,
+            uint256 amountOut,
+            ReserveData memory newData
+        )
+    {
+        ReserveData memory data;
+        (data.rIn, data.rOut, data.vIn, data.vOut, data.feeInPrecision) = DMMLibrary.getTradeInfo(
+            pool,
+            tokenIn,
+            tokenOut
+        );
+        uint256 totalSupply = _calculateSyncTotalSupply(IDMMPool(pool), data);
+        // calculate amountOut
+        amountIn = lpQty.mul(data.rIn) / totalSupply;
+        amountOut = lpQty.mul(data.rOut) / totalSupply;
+        // calculate ReserveData
+        newData.rIn = data.rIn - amountIn;
+        newData.rOut = data.rOut - amountOut;
+        uint256 b = Math.min(
+            newData.rIn.mul(totalSupply) / data.rIn,
+            newData.rOut.mul(totalSupply) / data.rOut
+        );
+        newData.vIn = Math.max(data.vIn.mul(b) / totalSupply, data.rIn);
+        newData.vOut = Math.max(data.vOut.mul(b) / totalSupply, data.rOut);
+        newData.feeInPrecision = data.feeInPrecision;
+    }
+
+    function _calculateSyncTotalSupply(IDMMPool pool, ReserveData memory data)
+        internal
+        view
+        returns (uint256 totalSupply)
+    {
+        totalSupply = IERC20(address(pool)).totalSupply();
+
+        (address feeTo, uint16 governmentFeeBps) = factory.getFeeConfiguration();
+        if (feeTo == address(0)) return totalSupply;
+
+        uint256 _kLast = pool.kLast();
+        if (_kLast == 0) return totalSupply;
+
+        uint256 rootKLast = MathExt.sqrt(_kLast);
+        uint256 rootK = MathExt.sqrt(data.vIn * data.vOut);
+
+        uint256 numerator = totalSupply.mul(rootK.sub(rootKLast)).mul(governmentFeeBps);
+        uint256 denominator = rootK.add(rootKLast).mul(5000);
+        uint256 liquidity = numerator / denominator;
+
+        totalSupply -= liquidity;
     }
 
     function _calculateSwapInAmount(
