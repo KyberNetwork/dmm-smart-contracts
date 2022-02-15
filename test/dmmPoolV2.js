@@ -1,6 +1,6 @@
 const TestToken = artifacts.require('TestToken');
-const DMMFactory = artifacts.require('DMMFactory');
-const DMMPool = artifacts.require('DMMPool');
+const DMMFactory = artifacts.require('DMMFactoryV2');
+const DMMPool = artifacts.require('DMMPoolV2');
 
 const {expectEvent, expectRevert, constants} = require('@openzeppelin/test-helpers');
 const {assert} = require('chai');
@@ -11,6 +11,7 @@ const dmmHelper = require('./dmmHelper');
 const {expandTo18Decimals, precisionUnits} = require('./helper');
 
 const MINIMUM_LIQUIDITY = new BN(1000);
+const FACTOR_IN_PRECISION = new BN(0.3);
 
 let token0;
 let token1;
@@ -46,7 +47,10 @@ contract('DMMPool', function (accounts) {
 
   it('can not initialize not by factory', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
-    await expectRevert(pool.initialize(token0.address, token1.address, unamplifiedBps), 'DMM: FORBIDDEN');
+    await expectRevert(
+      pool.initialize(token0.address, token1.address, unamplifiedBps, FACTOR_IN_PRECISION),
+      'DMM: FORBIDDEN'
+    );
   });
 
   describe('mint', async () => {
@@ -784,7 +788,7 @@ async function assertTokenPoolBalances(token0, token1, user, expectedBalances) {
 }
 
 async function setupFactory(admin) {
-  return await DMMFactory.new(admin);
+  return await DMMFactory.new(admin, FACTOR_IN_PRECISION);
 }
 
 async function setupPool(admin, tokenA, tokenB, ampBps) {
