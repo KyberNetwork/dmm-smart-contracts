@@ -14,9 +14,8 @@ import "./interfaces/IDMMFactory.sol";
 import "./interfaces/IDMMCallee.sol";
 import "./interfaces/IDMMPool.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./VolumeTrendRecorder.sol";
 
-contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder {
+contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -31,6 +30,8 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorde
     }
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
+    uint256 internal constant PRECISION = 10**18;
+
     /// @dev To make etherscan auto-verify new pool, these variables are not immutable
     IDMMFactory public override factory;
     IERC20 public override token0;
@@ -63,7 +64,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorde
     );
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
 
-    constructor() public ERC20Permit("KyberDMM LP", "DMM-LP", "1") VolumeTrendRecorder(0) {
+    constructor() public ERC20Permit("KyberDMM LP", "DMM-LP", "1") {
         factory = IDMMFactory(msg.sender);
     }
 
