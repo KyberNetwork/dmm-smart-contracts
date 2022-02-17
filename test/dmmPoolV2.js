@@ -25,8 +25,6 @@ let app;
 let ampBps = new BN(20000);
 let unamplifiedBps = new BN(10000);
 
-let baseRate = new BN(0);
-
 contract('DMMPoolV2', function (accounts) {
   before('setup', async () => {
     admin = accounts[0];
