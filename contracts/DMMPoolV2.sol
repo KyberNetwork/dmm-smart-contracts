@@ -202,7 +202,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
             ? newData.reserve1 - (data.reserve1 - amount1Out)
             : 0;
         require(amount0In > 0 || amount1In > 0, "DMM: INSUFFICIENT_INPUT_AMOUNT");
-        uint256 feeInPrecision = verifyBalanceAndUpdateEma(
+        uint256 feeInPrecision = verifyBalance(
             amount0In,
             amount1In,
             isAmpPool ? data.vReserve0 : data.reserve0,
@@ -287,7 +287,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
         return string(abi.encodePacked("DMM-LP ", _token0.symbol(), "-", _token1.symbol()));
     }
 
-    function verifyBalanceAndUpdateEma(
+    function verifyBalance(
         uint256 amount0In,
         uint256 amount1In,
         uint256 beforeReserve0,
