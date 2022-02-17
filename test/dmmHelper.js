@@ -38,7 +38,7 @@ module.exports.getFee = (totalSuppy, k, kLast, governmentFeeBps) => {
 };
 
 // get price range of token1 / token0
-module.exports.getPriceRange = tradeInfo => {
+module.exports.getPriceRange = (tradeInfo) => {
   let maxRate;
   if (tradeInfo._reserve0.eq(tradeInfo._vReserve0)) {
     maxRate = Infinity;
@@ -57,4 +57,31 @@ module.exports.getPriceRange = tradeInfo => {
     minRate = limVReserve1.mul(Helper.precisionUnits).div(limVReserve0);
   }
   return [minRate, maxRate];
+};
+
+module.exports.getAmountOutV2 = async (amountIn, tokenIn, pool) => {
+  let token0Addr = await pool.token0();
+  let tradeInfo = await pool.getTradeInfo();
+  let reserveIn = token0Addr == tokenIn.address ? tradeInfo._vReserve0 : tradeInfo._vReserve1;
+  let reserveOut = token0Addr == tokenIn.address ? tradeInfo._vReserve1 : tradeInfo._vReserve0;
+
+  let amountInWithFee = amountIn.mul(Helper.precisionUnits.sub(tradeInfo._feeInPrecision)).div(Helper.precisionUnits);
+  let numerator = reserveIn.mul(reserveOut);
+  let denominator = reserveIn.add(amountInWithFee);
+  return reserveOut.sub(numerator.add(denominator.sub(new BN(1))).div(denominator));
+};
+
+module.exports.getAmountInV2 = async (amountOut, tokenIn, pool) => {
+  let token0Addr = await pool.token0();
+  let tradeInfo = await pool.getTradeInfo();
+  let reserveIn = token0Addr == tokenIn.address ? tradeInfo._vReserve0 : tradeInfo._vReserve1;
+  let reserveOut = token0Addr == tokenIn.address ? tradeInfo._vReserve1 : tradeInfo._vReserve0;
+  // amountIn = reserveIn * amountOut / (reserveOut - amountOut)
+  let numerator = reserveIn.mul(amountOut);
+  let denominator = reserveOut.sub(amountOut);
+  let amountIn = numerator.div(denominator).add(new BN(1));
+  // amountIn = floor(amountIn * precision / (precision - feeInPrecision))
+  numerator = amountIn.mul(Helper.precisionUnits);
+  denominator = Helper.precisionUnits.sub(tradeInfo._feeInPrecision);
+  return (amountIn = numerator.add(denominator.sub(new BN(1))).div(denominator));
 };

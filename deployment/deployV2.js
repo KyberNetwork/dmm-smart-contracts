@@ -1,4 +1,4 @@
-const DMMFactory = artifacts.require('DMMFactoryV2');
+const DMMFactory = artifacts.require('KSFactoryV2');
 const DMMRouter02 = artifacts.require('DMMRouter02');
 const BN = web3.utils.BN;
 const FACTOR_IN_PRECISION = new BN(0.3);

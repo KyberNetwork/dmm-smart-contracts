@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./interfaces/IDMMFactory.sol";
 import "./DMMPoolV2.sol";
 
-contract DMMFactoryV2 is IDMMFactory {
+contract KSFactory is IDMMFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 internal constant BPS = 10000;
@@ -15,8 +15,8 @@ contract DMMFactoryV2 is IDMMFactory {
     uint16 private governmentFeeBps;
     address public override feeToSetter;
 
-    /// @dev factor to set for pools
-    uint256 internal factorInPrecision;
+    /// @dev fee to set for pools
+    uint256 internal feeInPrecision;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPools;
     mapping(IERC20 => mapping(IERC20 => address)) public override getUnamplifiedPool;
@@ -32,9 +32,9 @@ contract DMMFactoryV2 is IDMMFactory {
     event SetFeeConfiguration(address feeTo, uint16 governmentFeeBps);
     event SetFeeToSetter(address feeToSetter);
 
-    constructor(address _feeToSetter, uint256 _factorInPrecision) public {
+    constructor(address _feeToSetter, uint256 _feeInPrecision) public {
         feeToSetter = _feeToSetter;
-        factorInPrecision = _factorInPrecision;
+        feeInPrecision = _feeInPrecision;
     }
 
     function createPool(
@@ -51,8 +51,8 @@ contract DMMFactoryV2 is IDMMFactory {
             ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
             "DMM: UNAMPLIFIED_POOL_EXISTS"
         );
-        pool = address(new DMMPoolV2());
-        DMMPoolV2(pool).initialize(token0, token1, ampBps, factorInPrecision);
+        pool = address(new KSPool());
+        KSPool(pool).initialize(token0, token1, ampBps, getFinalFee(feeInPrecision, ampBps));
         // populate mapping in the reverse direction
         tokenPools[token0][token1].add(pool);
         tokenPools[token1][token0].add(pool);
@@ -126,5 +126,17 @@ contract DMMFactoryV2 is IDMMFactory {
         address pool
     ) external override view returns (bool) {
         return tokenPools[token0][token1].contains(pool);
+    }
+
+    function getFinalFee(uint256 _feeInPrecision, uint32 _ampBps) internal pure returns (uint256) {
+        if (_ampBps <= 20000) {
+            return _feeInPrecision;
+        } else if (_ampBps <= 50000) {
+            return (_feeInPrecision * 20) / 30;
+        } else if (_ampBps <= 200000) {
+            return (_feeInPrecision * 10) / 30;
+        } else {
+            return (_feeInPrecision * 4) / 30;
+        }
     }
 }

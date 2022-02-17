@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./libraries/MathExt.sol";
-import "./libraries/FeeFomula.sol";
 import "./libraries/ERC20Permit.sol";
 
 import "./interfaces/IDMMFactory.sol";
@@ -15,7 +14,7 @@ import "./interfaces/IDMMCallee.sol";
 import "./interfaces/IDMMPool.sol";
 import "./interfaces/IERC20Metadata.sol";
 
-contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
+contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -48,8 +47,8 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
     /// @dev vReserve0 * vReserve1, as of immediately after the most recent liquidity event
     uint256 public override kLast;
 
-    /// @dev fixed factor for arbitrum
-    uint256 internal factorInPrecision;
+    /// @dev fixed fee for arbitrum
+    uint256 internal feeInPrecision;
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
@@ -64,7 +63,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
     );
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
 
-    constructor() public ERC20Permit("KyberDMM LP", "DMM-LP", "1") {
+    constructor() public ERC20Permit("KyberSwap LP", "KS-LP", "1") {
         factory = IDMMFactory(msg.sender);
     }
 
@@ -73,13 +72,13 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
         IERC20 _token0,
         IERC20 _token1,
         uint32 _ampBps,
-        uint256 _factorInPrecision
+        uint256 _feeInPrecision
     ) external {
         require(msg.sender == address(factory), "DMM: FORBIDDEN");
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
-        factorInPrecision = _factorInPrecision;
+        feeInPrecision = _feeInPrecision;
     }
 
     /// @dev this low-level function should be called from a contract
@@ -202,7 +201,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
             ? newData.reserve1 - (data.reserve1 - amount1Out)
             : 0;
         require(amount0In > 0 || amount1In > 0, "DMM: INSUFFICIENT_INPUT_AMOUNT");
-        uint256 feeInPrecision = verifyBalance(
+        verifyBalance(
             amount0In,
             amount1In,
             isAmpPool ? data.vReserve0 : data.reserve0,
@@ -253,7 +252,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
             uint112 _reserve1,
             uint112 _vReserve0,
             uint112 _vReserve1,
-            uint256 feeInPrecision
+            uint256 _feeInPrecision
         )
     {
         // gas saving to read reserve data
@@ -266,7 +265,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
             _vReserve0 = _reserve0;
             _vReserve1 = _reserve1;
         }
-        feeInPrecision = getFinalFee(FeeFomula.getFee(factorInPrecision), _ampBps);
+        _feeInPrecision = feeInPrecision;
     }
 
     /// @dev returns reserve data to calculate amount to add liquidity
@@ -278,13 +277,13 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
     function name() public override view returns (string memory) {
         IERC20Metadata _token0 = IERC20Metadata(address(token0));
         IERC20Metadata _token1 = IERC20Metadata(address(token1));
-        return string(abi.encodePacked("KyberDMM LP ", _token0.symbol(), "-", _token1.symbol()));
+        return string(abi.encodePacked("KyberSwap LP ", _token0.symbol(), "-", _token1.symbol()));
     }
 
     function symbol() public override view returns (string memory) {
         IERC20Metadata _token0 = IERC20Metadata(address(token0));
         IERC20Metadata _token1 = IERC20Metadata(address(token1));
-        return string(abi.encodePacked("DMM-LP ", _token0.symbol(), "-", _token1.symbol()));
+        return string(abi.encodePacked("KS-LP ", _token0.symbol(), "-", _token1.symbol()));
     }
 
     function verifyBalance(
@@ -294,8 +293,7 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
         uint256 beforeReserve1,
         uint256 afterReserve0,
         uint256 afterReserve1
-    ) internal virtual view returns (uint256 feeInPrecision) {
-        feeInPrecision = getFinalFee(FeeFomula.getFee(factorInPrecision), ampBps);
+    ) internal virtual view {
         // verify balance update matches with fomula
         uint256 balance0Adjusted = afterReserve0.mul(PRECISION);
         balance0Adjusted = balance0Adjusted.sub(amount0In.mul(feeInPrecision));
@@ -352,18 +350,6 @@ contract DMMPoolV2 is IDMMPool, ERC20Permit, ReentrancyGuard {
         if (isAmpPool) {
             data.vReserve0 = vReserve0;
             data.vReserve1 = vReserve1;
-        }
-    }
-
-    function getFinalFee(uint256 feeInPrecision, uint32 _ampBps) internal pure returns (uint256) {
-        if (_ampBps <= 20000) {
-            return feeInPrecision;
-        } else if (_ampBps <= 50000) {
-            return (feeInPrecision * 20) / 30;
-        } else if (_ampBps <= 200000) {
-            return (feeInPrecision * 10) / 30;
-        } else {
-            return (feeInPrecision * 4) / 30;
         }
     }
 
