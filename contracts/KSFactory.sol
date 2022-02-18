@@ -3,10 +3,10 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
-import "./interfaces/IDMMFactory.sol";
-import "./DMMPoolV2.sol";
+import "./interfaces/IKSFactory.sol";
+import "./KSPool.sol";
 
-contract KSFactory is IDMMFactory {
+contract KSFactory is IKSFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 internal constant BPS = 10000;
@@ -42,14 +42,14 @@ contract KSFactory is IDMMFactory {
         IERC20 tokenB,
         uint32 ampBps
     ) external override returns (address pool) {
-        require(tokenA != tokenB, "DMM: IDENTICAL_ADDRESSES");
+        require(tokenA != tokenB, "KS: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(address(token0) != address(0), "DMM: ZERO_ADDRESS");
-        require(ampBps >= BPS, "DMM: INVALID_BPS");
+        require(address(token0) != address(0), "KS: ZERO_ADDRESS");
+        require(ampBps >= BPS, "KS: INVALID_BPS");
         // only exist 1 unamplified pool of a pool.
         require(
             ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
-            "DMM: UNAMPLIFIED_POOL_EXISTS"
+            "KS: UNAMPLIFIED_POOL_EXISTS"
         );
         pool = address(new KSPool());
         KSPool(pool).initialize(token0, token1, ampBps, getFinalFee(feeInPrecision, ampBps));
@@ -66,8 +66,8 @@ contract KSFactory is IDMMFactory {
     }
 
     function setFeeConfiguration(address _feeTo, uint16 _governmentFeeBps) external override {
-        require(msg.sender == feeToSetter, "DMM: FORBIDDEN");
-        require(_governmentFeeBps > 0 && _governmentFeeBps < 2000, "DMM: INVALID FEE");
+        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+        require(_governmentFeeBps > 0 && _governmentFeeBps < 2000, "KS: INVALID FEE");
         feeTo = _feeTo;
         governmentFeeBps = _governmentFeeBps;
 
@@ -75,7 +75,7 @@ contract KSFactory is IDMMFactory {
     }
 
     function setFeeToSetter(address _feeToSetter) external override {
-        require(msg.sender == feeToSetter, "DMM: FORBIDDEN");
+        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
         feeToSetter = _feeToSetter;
 
         emit SetFeeToSetter(_feeToSetter);

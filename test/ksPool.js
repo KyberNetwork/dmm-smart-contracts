@@ -1,6 +1,6 @@
 const TestToken = artifacts.require('TestToken');
-const DMMFactory = artifacts.require('KSFactory');
-const DMMPool = artifacts.require('KSPool');
+const KSFactory = artifacts.require('KSFactory');
+const KSPool = artifacts.require('KSPool');
 
 const {expectEvent, expectRevert, constants} = require('@openzeppelin/test-helpers');
 const {assert} = require('chai');
@@ -25,7 +25,7 @@ let app;
 let ampBps = new BN(20000);
 let unamplifiedBps = new BN(10000);
 
-contract('DMMPoolV2', function (accounts) {
+contract('KSPool', function (accounts) {
   before('setup', async () => {
     admin = accounts[0];
     trader = accounts[1];
@@ -39,15 +39,19 @@ contract('DMMPoolV2', function (accounts) {
 
   it('name & symbol', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
-    assert(await pool.symbol(), `DMM-LP ${await token0.symbol()} ${await token1.symbol()}`, 'unexpected symbol');
-    assert(await pool.name(), `KyberDMM LP ${await token0.symbol()} ${await token1.symbol()}`, 'unexpected name');
+    assert.equal(await pool.symbol(), `KS-LP ${await token0.symbol()}-${await token1.symbol()}`, 'unexpected symbol');
+    assert.equal(
+      await pool.name(),
+      `KyberSwap LP ${await token0.symbol()}-${await token1.symbol()}`,
+      'unexpected name'
+    );
   });
 
   it('can not initialize not by factory', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
     await expectRevert(
       pool.initialize(token0.address, token1.address, unamplifiedBps, FEE_IN_PRECISION),
-      'DMM: FORBIDDEN'
+      'KS: FORBIDDEN'
     );
   });
 
@@ -84,7 +88,7 @@ contract('DMMPoolV2', function (accounts) {
       const updateToken1Amount = Helper.expandTo18Decimals(2);
       await token0.transfer(pool.address, updateToken0Amount);
       // if transfer only 1 token, trade will revert
-      await expectRevert(pool.mint(trader, {from: app}), 'DMM: INSUFFICIENT_LIQUIDITY_MINTED');
+      await expectRevert(pool.mint(trader, {from: app}), 'KS: INSUFFICIENT_LIQUIDITY_MINTED');
 
       await token1.transfer(pool.address, updateToken1Amount);
       result = await pool.mint(trader, {from: app});
@@ -138,7 +142,7 @@ contract('DMMPoolV2', function (accounts) {
       const updateToken1Amount = Helper.expandTo18Decimals(2);
       await token0.transfer(pool.address, updateToken0Amount);
       // if transfer only 1 token, trade will revert
-      await expectRevert(pool.mint(trader, {from: app}), 'DMM: INSUFFICIENT_LIQUIDITY_MINTED');
+      await expectRevert(pool.mint(trader, {from: app}), 'KS: INSUFFICIENT_LIQUIDITY_MINTED');
 
       await token1.transfer(pool.address, updateToken1Amount);
       result = await pool.mint(trader, {from: app});
@@ -181,7 +185,7 @@ contract('DMMPoolV2', function (accounts) {
         );
         await token0.transfer(pool.address, expandTo18Decimals(swapAmount));
         let expectedOutputAmount = await dmmHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
-        await expectRevert(pool.swap(0, expectedOutputAmount.add(new BN(1)), trader, '0x'), 'DMM: K');
+        await expectRevert(pool.swap(0, expectedOutputAmount.add(new BN(1)), trader, '0x'), 'KS: K');
         await pool.swap(0, new BN(expectedOutputAmount), trader, '0x');
       });
 
@@ -195,7 +199,7 @@ contract('DMMPoolV2', function (accounts) {
         );
         await token0.transfer(pool.address, expandTo18Decimals(swapAmount));
         let amountOut = await dmmHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
-        await expectRevert(pool.swap(0, amountOut.add(new BN(1)), trader, '0x'), 'DMM: K');
+        await expectRevert(pool.swap(0, amountOut.add(new BN(1)), trader, '0x'), 'KS: K');
         await pool.swap(0, new BN(amountOut), trader, '0x');
       });
     });
@@ -210,21 +214,18 @@ contract('DMMPoolV2', function (accounts) {
 
       let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0.address, pool);
       // when amountIn = 0 -> revert
-      await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'DMM: INSUFFICIENT_INPUT_AMOUNT');
+      await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'KS: INSUFFICIENT_INPUT_AMOUNT');
 
       // when amountOut = 0 -> revert
       await token0.transfer(pool.address, swapAmount);
-      await expectRevert(
-        pool.swap(new BN(0), new BN(0), trader, '0x', {from: app}),
-        'DMM: INSUFFICIENT_OUTPUT_AMOUNT'
-      );
+      await expectRevert(pool.swap(new BN(0), new BN(0), trader, '0x', {from: app}), 'KS: INSUFFICIENT_OUTPUT_AMOUNT');
       // when amountOut > liquidity -> revert
       await expectRevert(
         pool.swap(new BN(0), token1Amount.add(new BN(1)), trader, '0x', {from: app}),
-        'DMM: INSUFFICIENT_LIQUIDITY'
+        'KS: INSUFFICIENT_LIQUIDITY'
       );
       // revert when destAddres is token0 or token1
-      await expectRevert(pool.swap(new BN(0), amountOut, token0.address, '0x', {from: app}), 'DMM: INVALID_TO');
+      await expectRevert(pool.swap(new BN(0), amountOut, token0.address, '0x', {from: app}), 'KS: INVALID_TO');
       // normal swap if everything is valid
       await token1.transfer(trader, new BN(1));
 
@@ -266,21 +267,18 @@ contract('DMMPoolV2', function (accounts) {
 
       let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0.address, pool);
       // when amountIn = 0 -> revert
-      await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'DMM: INSUFFICIENT_INPUT_AMOUNT');
+      await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'KS: INSUFFICIENT_INPUT_AMOUNT');
 
       // when amountOut = 0 -> revert
       await token0.transfer(pool.address, swapAmount);
-      await expectRevert(
-        pool.swap(new BN(0), new BN(0), trader, '0x', {from: app}),
-        'DMM: INSUFFICIENT_OUTPUT_AMOUNT'
-      );
+      await expectRevert(pool.swap(new BN(0), new BN(0), trader, '0x', {from: app}), 'KS: INSUFFICIENT_OUTPUT_AMOUNT');
       // when amountOut > liquidity -> revert
       await expectRevert(
         pool.swap(new BN(0), token1Amount.add(new BN(1)), trader, '0x', {from: app}),
-        'DMM: INSUFFICIENT_LIQUIDITY'
+        'KS: INSUFFICIENT_LIQUIDITY'
       );
       // revert when destAddres is token0 or token1
-      await expectRevert(pool.swap(new BN(0), amountOut, token0.address, '0x', {from: app}), 'DMM: INVALID_TO');
+      await expectRevert(pool.swap(new BN(0), amountOut, token0.address, '0x', {from: app}), 'KS: INVALID_TO');
       // normal swap if everything is valid
       await token1.transfer(trader, new BN(1));
 
@@ -332,7 +330,7 @@ contract('DMMPoolV2', function (accounts) {
         let beforeBalanceToken1 = await token1.balanceOf(trader);
         await token0.transfer(pool.address, swapAmount);
 
-        await expectRevert(pool.swap(new BN(0), amountOut.add(new BN(1)), trader, '0x', {from: app}), 'DMM: K');
+        await expectRevert(pool.swap(new BN(0), amountOut.add(new BN(1)), trader, '0x', {from: app}), 'KS: K');
 
         let result = await pool.swap(new BN(0), amountOut, trader, '0x', {from: app});
         console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
@@ -364,7 +362,7 @@ contract('DMMPoolV2', function (accounts) {
         let beforeBalanceToken1 = await token1.balanceOf(trader);
         await token1.transfer(pool.address, swapAmount);
 
-        await expectRevert(pool.swap(amountOut.add(new BN(1)), new BN(0), trader, '0x', {from: app}), 'DMM: K');
+        await expectRevert(pool.swap(amountOut.add(new BN(1)), new BN(0), trader, '0x', {from: app}), 'KS: K');
 
         let result = await pool.swap(amountOut, new BN(0), trader, '0x', {from: app});
         console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
@@ -470,7 +468,7 @@ contract('DMMPoolV2', function (accounts) {
         let result = await pool.getTradeInfo();
 
         let outputAmount = inputAmount.mul(precisionUnits.sub(result._feeInPrecision)).div(precisionUnits);
-        await expectRevert(pool.swap(outputAmount.add(new BN(1)), 0, trader, '0x'), 'DMM: K');
+        await expectRevert(pool.swap(outputAmount.add(new BN(1)), 0, trader, '0x'), 'KS: K');
         await pool.swap(outputAmount, 0, trader, '0x');
       });
     });
@@ -484,7 +482,7 @@ contract('DMMPoolV2', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       // revert if liquidity burn is 0
-      await expectRevert(pool.burn(liquidityProvider, {from: app}), 'DMM: INSUFFICIENT_LIQUIDITY_BURNED');
+      await expectRevert(pool.burn(liquidityProvider, {from: app}), 'KS: INSUFFICIENT_LIQUIDITY_BURNED');
 
       const expectedLiquidity = expandTo18Decimals(3);
       let beforeBalances = await getTokenPoolBalances(token0, token1, liquidityProvider);
@@ -527,7 +525,7 @@ contract('DMMPoolV2', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       // revert if liquidity burn is 0
-      await expectRevert(pool.burn(liquidityProvider, {from: app}), 'DMM: INSUFFICIENT_LIQUIDITY_BURNED');
+      await expectRevert(pool.burn(liquidityProvider, {from: app}), 'KS: INSUFFICIENT_LIQUIDITY_BURNED');
 
       const expectedLiquidity = expandTo18Decimals(2);
       let beforeBalances = await getTokenPoolBalances(token0, token1, liquidityProvider);
@@ -765,7 +763,7 @@ contract('DMMPoolV2', function (accounts) {
     Helper.assertEqual(tradeInfo._vReserve1, expandTo18Decimals(2000));
     // test case overflow
     await token0.transfer(pool.address, new BN(2).pow(new BN(112)));
-    await expectRevert(pool.sync(), 'DMM: OVERFLOW');
+    await expectRevert(pool.sync(), 'KS: OVERFLOW');
     await pool.skim(trader);
   });
 });
@@ -786,7 +784,7 @@ async function assertTokenPoolBalances(token0, token1, user, expectedBalances) {
 }
 
 async function setupFactory(admin) {
-  return await DMMFactory.new(admin, FEE_IN_PRECISION);
+  return await KSFactory.new(admin, FEE_IN_PRECISION);
 }
 
 async function setupPool(admin, tokenA, tokenB, ampBps) {
@@ -794,7 +792,7 @@ async function setupPool(admin, tokenA, tokenB, ampBps) {
 
   await factory.createPool(tokenA.address, tokenB.address, ampBps);
   const poolAddrs = await factory.getPools(tokenA.address, tokenB.address);
-  const pool = await DMMPool.at(poolAddrs[0]);
+  const pool = await KSPool.at(poolAddrs[0]);
 
   return [factory, pool];
 }

@@ -9,12 +9,12 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./libraries/MathExt.sol";
 import "./libraries/ERC20Permit.sol";
 
-import "./interfaces/IDMMFactory.sol";
-import "./interfaces/IDMMCallee.sol";
-import "./interfaces/IDMMPool.sol";
+import "./interfaces/IKSFactory.sol";
+import "./interfaces/IKSCallee.sol";
+import "./interfaces/IKSPool.sol";
 import "./interfaces/IERC20Metadata.sol";
 
-contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
+contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -32,7 +32,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
     uint256 internal constant PRECISION = 10**18;
 
     /// @dev To make etherscan auto-verify new pool, these variables are not immutable
-    IDMMFactory public override factory;
+    IKSFactory public override factory;
     IERC20 public override token0;
     IERC20 public override token1;
 
@@ -47,7 +47,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
     /// @dev vReserve0 * vReserve1, as of immediately after the most recent liquidity event
     uint256 public override kLast;
 
-    /// @dev fixed fee for arbitrum
+    /// @dev fixed fee for swap
     uint256 internal feeInPrecision;
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
@@ -64,7 +64,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
     event Sync(uint256 vReserve0, uint256 vReserve1, uint256 reserve0, uint256 reserve1);
 
     constructor() public ERC20Permit("KyberSwap LP", "KS-LP", "1") {
-        factory = IDMMFactory(msg.sender);
+        factory = IKSFactory(msg.sender);
     }
 
     // called once by the factory at time of deployment
@@ -74,7 +74,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
         uint32 _ampBps,
         uint256 _feeInPrecision
     ) external {
-        require(msg.sender == address(factory), "DMM: FORBIDDEN");
+        require(msg.sender == address(factory), "KS: FORBIDDEN");
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
@@ -112,7 +112,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
                 _data.vReserve1 = Math.max(data.vReserve1.mul(b) / _totalSupply, _data.reserve1);
             }
         }
-        require(liquidity > 0, "DMM: INSUFFICIENT_LIQUIDITY_MINTED");
+        require(liquidity > 0, "KS: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
 
         _update(isAmpPool, _data);
@@ -135,14 +135,14 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
 
         uint256 balance0 = _token0.balanceOf(address(this));
         uint256 balance1 = _token1.balanceOf(address(this));
-        require(balance0 >= data.reserve0 && balance1 >= data.reserve1, "DMM: UNSYNC_RESERVES");
+        require(balance0 >= data.reserve0 && balance1 >= data.reserve1, "KS: UNSYNC_RESERVES");
         uint256 liquidity = balanceOf(address(this));
 
         bool feeOn = _mintFee(isAmpPool, data);
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, "DMM: INSUFFICIENT_LIQUIDITY_BURNED");
+        require(amount0 > 0 && amount1 > 0, "KS: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
         _token0.safeTransfer(to, amount0);
         _token1.safeTransfer(to, amount1);
@@ -170,11 +170,11 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
         address to,
         bytes calldata callbackData
     ) external override nonReentrant {
-        require(amount0Out > 0 || amount1Out > 0, "DMM: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amount0Out > 0 || amount1Out > 0, "KS: INSUFFICIENT_OUTPUT_AMOUNT");
         (bool isAmpPool, ReserveData memory data) = getReservesData(); // gas savings
         require(
             amount0Out < data.reserve0 && amount1Out < data.reserve1,
-            "DMM: INSUFFICIENT_LIQUIDITY"
+            "KS: INSUFFICIENT_LIQUIDITY"
         );
 
         ReserveData memory newData;
@@ -182,11 +182,11 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
             // scope for _token{0,1}, avoids stack too deep errors
             IERC20 _token0 = token0;
             IERC20 _token1 = token1;
-            require(to != address(_token0) && to != address(_token1), "DMM: INVALID_TO");
+            require(to != address(_token0) && to != address(_token1), "KS: INVALID_TO");
             if (amount0Out > 0) _token0.safeTransfer(to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _token1.safeTransfer(to, amount1Out); // optimistically transfer tokens
             if (callbackData.length > 0)
-                IDMMCallee(to).dmmSwapCall(msg.sender, amount0Out, amount1Out, callbackData);
+                IKSCallee(to).dmmSwapCall(msg.sender, amount0Out, amount1Out, callbackData);
             newData.reserve0 = _token0.balanceOf(address(this));
             newData.reserve1 = _token1.balanceOf(address(this));
             if (isAmpPool) {
@@ -200,7 +200,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
         uint256 amount1In = newData.reserve1 > data.reserve1 - amount1Out
             ? newData.reserve1 - (data.reserve1 - amount1Out)
             : 0;
-        require(amount0In > 0 || amount1In > 0, "DMM: INSUFFICIENT_INPUT_AMOUNT");
+        require(amount0In > 0 || amount1In > 0, "KS: INSUFFICIENT_INPUT_AMOUNT");
         verifyBalance(
             amount0In,
             amount1In,
@@ -303,7 +303,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
         balance1Adjusted = balance1Adjusted / PRECISION;
         require(
             balance0Adjusted.mul(balance1Adjusted) >= beforeReserve0.mul(beforeReserve1),
-            "DMM: K"
+            "KS: K"
         );
     }
 
@@ -358,7 +358,7 @@ contract KSPool is IDMMPool, ERC20Permit, ReentrancyGuard {
     }
 
     function safeUint112(uint256 x) internal pure returns (uint112) {
-        require(x <= MAX_UINT112, "DMM: OVERFLOW");
+        require(x <= MAX_UINT112, "KS: OVERFLOW");
         return uint112(x);
     }
 }
