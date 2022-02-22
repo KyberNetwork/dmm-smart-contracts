@@ -16,7 +16,7 @@ contract KSFactory is IKSFactory {
     address public override feeToSetter;
 
     /// @dev fee to set for pools
-    uint256 internal feeInPrecision;
+    mapping(uint16 => bool) private feeOptions;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPools;
     mapping(IERC20 => mapping(IERC20 => address)) public override getUnamplifiedPool;
@@ -27,20 +27,29 @@ contract KSFactory is IKSFactory {
         IERC20 indexed token1,
         address pool,
         uint32 ampBps,
+        uint16 feeBps,
         uint256 totalPool
     );
     event SetFeeConfiguration(address feeTo, uint16 governmentFeeBps);
+    event EnableFeeOption(uint16 feeBps);
+    event DisableFeeOption(uint16 feeBps);
     event SetFeeToSetter(address feeToSetter);
 
-    constructor(address _feeToSetter, uint256 _feeInPrecision) public {
+    constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
-        feeInPrecision = _feeInPrecision;
+
+        feeOptions[1] = true;
+        feeOptions[5] = true;
+        feeOptions[30] = true;
+        feeOptions[50] = true;
+        feeOptions[100] = true;
     }
 
     function createPool(
         IERC20 tokenA,
         IERC20 tokenB,
-        uint32 ampBps
+        uint32 ampBps,
+        uint16 feeBps
     ) external override returns (address pool) {
         require(tokenA != tokenB, "KS: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
@@ -51,8 +60,9 @@ contract KSFactory is IKSFactory {
             ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
             "KS: UNAMPLIFIED_POOL_EXISTS"
         );
+        require(feeOptions[feeBps], "KS: FEE_OPTION_NOT_EXISTS");
         pool = address(new KSPool());
-        KSPool(pool).initialize(token0, token1, ampBps, getFinalFee(feeInPrecision, ampBps));
+        KSPool(pool).initialize(token0, token1, ampBps, feeBps);
         // populate mapping in the reverse direction
         tokenPools[token0][token1].add(pool);
         tokenPools[token1][token0].add(pool);
@@ -62,7 +72,7 @@ contract KSFactory is IKSFactory {
         }
         allPools.push(pool);
 
-        emit PoolCreated(token0, token1, pool, ampBps, allPools.length);
+        emit PoolCreated(token0, token1, pool, ampBps, feeBps, allPools.length);
     }
 
     function setFeeConfiguration(address _feeTo, uint16 _governmentFeeBps) external override {
@@ -72,6 +82,22 @@ contract KSFactory is IKSFactory {
         governmentFeeBps = _governmentFeeBps;
 
         emit SetFeeConfiguration(_feeTo, _governmentFeeBps);
+    }
+
+    function enableFeeOption(uint16 _feeBps) external override {
+        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+        require(_feeBps > 0, "KS: INVALID FEE");
+        feeOptions[_feeBps] = true;
+
+        emit EnableFeeOption(_feeBps);
+    }
+
+    function disableFeeOption(uint16 _feeBps) external override {
+        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+        require(_feeBps > 0, "KS: INVALID FEE");
+        feeOptions[_feeBps] = false;
+
+        emit DisableFeeOption(_feeBps);
     }
 
     function setFeeToSetter(address _feeToSetter) external override {
@@ -126,17 +152,5 @@ contract KSFactory is IKSFactory {
         address pool
     ) external override view returns (bool) {
         return tokenPools[token0][token1].contains(pool);
-    }
-
-    function getFinalFee(uint256 _feeInPrecision, uint32 _ampBps) internal pure returns (uint256) {
-        if (_ampBps <= 20000) {
-            return _feeInPrecision;
-        } else if (_ampBps <= 50000) {
-            return (_feeInPrecision * 20) / 30;
-        } else if (_ampBps <= 200000) {
-            return (_feeInPrecision * 10) / 30;
-        } else {
-            return (_feeInPrecision * 4) / 30;
-        }
     }
 }

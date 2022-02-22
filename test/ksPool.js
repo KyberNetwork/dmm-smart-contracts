@@ -11,7 +11,6 @@ const dmmHelper = require('./dmmHelper');
 const {expandTo18Decimals, precisionUnits} = require('./helper');
 
 const MINIMUM_LIQUIDITY = new BN(1000);
-const FEE_IN_PRECISION = 10 ** 14;
 
 let token0;
 let token1;
@@ -24,6 +23,7 @@ let app;
 
 let ampBps = new BN(20000);
 let unamplifiedBps = new BN(10000);
+let feeBps = new BN(1);
 
 contract('KSPool', function (accounts) {
   before('setup', async () => {
@@ -47,12 +47,35 @@ contract('KSPool', function (accounts) {
     );
   });
 
+  const ampBpsCases = [new BN(10000), new BN(20000), new BN(50000), new BN(200000), new BN(500000)];
+  const feeDesiredCases = [10 ** 14, 10 ** 14, (20 * 10 ** 14) / 30, (10 * 10 ** 14) / 30, (4 * 10 ** 14) / 30];
+
+  ampBpsCases.forEach((ampBpsCase, i) => {
+    it(`fee in ${ampBpsCase} amp pool`, async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, ampBpsCase);
+
+      let tradeInfo = await pool.getTradeInfo();
+      assert.equal(tradeInfo._feeInPrecision.toString(), precisionRound(feeDesiredCases[i], 0), 'unexpected fee');
+    });
+  });
+
   it('can not initialize not by factory', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
-    await expectRevert(
-      pool.initialize(token0.address, token1.address, unamplifiedBps, FEE_IN_PRECISION),
-      'KS: FORBIDDEN'
-    );
+    await expectRevert(pool.initialize(token0.address, token1.address, unamplifiedBps, feeBps), 'KS: FORBIDDEN');
+  });
+
+  it('enable fee option', async () => {
+    [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
+    const newFeeOption = new BN(10);
+    let result = await factory.enableFeeOption(newFeeOption);
+    expectEvent(result, 'EnableFeeOption', {feeBps: newFeeOption});
+  });
+
+  it('disable fee option', async () => {
+    [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
+    const newFeeOption = new BN(10);
+    let result = await factory.disableFeeOption(newFeeOption);
+    expectEvent(result, 'DisableFeeOption', {feeBps: newFeeOption});
   });
 
   describe('mint', async () => {
@@ -302,7 +325,6 @@ contract('KSPool', function (accounts) {
         to: trader,
       });
 
-      const tradeInfo = await pool.getTradeInfo();
       Helper.assertEqual(await token0.balanceOf(pool.address), token0Amount.add(swapAmount));
       Helper.assertEqual(await token1.balanceOf(pool.address), token1Amount.sub(amountOut));
       // balance of token0 should be unchanged after transfer
@@ -784,15 +806,20 @@ async function assertTokenPoolBalances(token0, token1, user, expectedBalances) {
 }
 
 async function setupFactory(admin) {
-  return await KSFactory.new(admin, FEE_IN_PRECISION);
+  return await KSFactory.new(admin);
 }
 
 async function setupPool(admin, tokenA, tokenB, ampBps) {
   let factory = await setupFactory(admin);
 
-  await factory.createPool(tokenA.address, tokenB.address, ampBps);
+  await factory.createPool(tokenA.address, tokenB.address, ampBps, feeBps);
   const poolAddrs = await factory.getPools(tokenA.address, tokenB.address);
   const pool = await KSPool.at(poolAddrs[0]);
 
   return [factory, pool];
+}
+
+function precisionRound(number, precision) {
+  var factor = Math.pow(10, precision);
+  return Math.floor(Math.floor(number * factor)) / factor;
 }
