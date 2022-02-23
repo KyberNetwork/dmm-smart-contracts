@@ -35,6 +35,11 @@ contract KSFactory is IKSFactory {
     event DisableFeeOption(uint16 feeBps);
     event SetFeeToSetter(address feeToSetter);
 
+    modifier onlyFeeSetter() {
+        require(msg.sender == feeToSetter, "only fee setter");
+        _;
+    }
+
     constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
 
@@ -75,8 +80,11 @@ contract KSFactory is IKSFactory {
         emit PoolCreated(token0, token1, pool, ampBps, feeBps, allPools.length);
     }
 
-    function setFeeConfiguration(address _feeTo, uint16 _governmentFeeBps) external override {
-        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+    function setFeeConfiguration(address _feeTo, uint16 _governmentFeeBps)
+        external
+        override
+        onlyFeeSetter
+    {
         require(_governmentFeeBps > 0 && _governmentFeeBps < 2000, "KS: INVALID FEE");
         feeTo = _feeTo;
         governmentFeeBps = _governmentFeeBps;
@@ -84,24 +92,21 @@ contract KSFactory is IKSFactory {
         emit SetFeeConfiguration(_feeTo, _governmentFeeBps);
     }
 
-    function enableFeeOption(uint16 _feeBps) external override {
-        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+    function enableFeeOption(uint16 _feeBps) external override onlyFeeSetter {
         require(_feeBps > 0, "KS: INVALID FEE");
         feeOptions[_feeBps] = true;
 
         emit EnableFeeOption(_feeBps);
     }
 
-    function disableFeeOption(uint16 _feeBps) external override {
-        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+    function disableFeeOption(uint16 _feeBps) external override onlyFeeSetter {
         require(_feeBps > 0, "KS: INVALID FEE");
         feeOptions[_feeBps] = false;
 
         emit DisableFeeOption(_feeBps);
     }
 
-    function setFeeToSetter(address _feeToSetter) external override {
-        require(msg.sender == feeToSetter, "KS: FORBIDDEN");
+    function setFeeToSetter(address _feeToSetter) external override onlyFeeSetter {
         feeToSetter = _feeToSetter;
 
         emit SetFeeToSetter(_feeToSetter);
