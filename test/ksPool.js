@@ -47,16 +47,11 @@ contract('KSPool', function (accounts) {
     );
   });
 
-  const ampBpsCases = [new BN(10000), new BN(20000), new BN(50000), new BN(200000), new BN(500000)];
-  const feeDesiredCases = [10 ** 14, 10 ** 14, (20 * 10 ** 14) / 30, (10 * 10 ** 14) / 30, (4 * 10 ** 14) / 30];
+  it(`feeInPrecision`, async () => {
+    [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
 
-  ampBpsCases.forEach((ampBpsCase, i) => {
-    it(`fee in ${ampBpsCase} amp pool`, async () => {
-      [factory, pool] = await setupPool(admin, token0, token1, ampBpsCase);
-
-      let tradeInfo = await pool.getTradeInfo();
-      assert.equal(tradeInfo._feeInPrecision.toString(), precisionRound(feeDesiredCases[i], 0), 'unexpected fee');
-    });
+    let tradeInfo = await pool.getTradeInfo();
+    assert.equal(tradeInfo._feeInPrecision.toString(), 10 ** 14, 'unexpected fee');
   });
 
   it('can not initialize not by factory', async () => {
@@ -817,9 +812,4 @@ async function setupPool(admin, tokenA, tokenB, ampBps) {
   const pool = await KSPool.at(poolAddrs[0]);
 
   return [factory, pool];
-}
-
-function precisionRound(number, precision) {
-  var factor = Math.pow(10, precision);
-  return Math.floor(Math.floor(number * factor)) / factor;
 }

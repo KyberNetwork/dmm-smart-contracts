@@ -8,7 +8,7 @@ interface IKSFactory {
         IERC20 tokenA,
         IERC20 tokenB,
         uint32 ampBps,
-        uint16 feeInPrecision
+        uint16 feeBps
     ) external returns (address pool);
 
     function setFeeConfiguration(address feeTo, uint16 governmentFeeBps) external;

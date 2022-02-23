@@ -16,7 +16,7 @@ contract KSFactory is IKSFactory {
     address public override feeToSetter;
 
     /// @dev fee to set for pools
-    mapping(uint16 => bool) private feeOptions;
+    mapping(uint16 => bool) public feeOptions;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPools;
     mapping(IERC20 => mapping(IERC20 => address)) public override getUnamplifiedPool;

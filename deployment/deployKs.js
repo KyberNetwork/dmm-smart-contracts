@@ -1,5 +1,5 @@
-const DMMFactory = artifacts.require('KSFactory');
-const DMMRouter02 = artifacts.require('DMMRouter02');
+const KSFactory = artifacts.require('KSFactory');
+const KSRouter02 = artifacts.require('KSRouter02');
 const BN = web3.utils.BN;
 
 async function main() {
@@ -7,10 +7,10 @@ async function main() {
   const accounts = await web3.eth.getAccounts();
 
   // We get the contract to deploy
-  const factory = await DMMFactory.new(accounts[0]);
+  const factory = await KSFactory.new(accounts[0]);
   console.log('Factory V2 deployed to:', factory.address);
 
-  const router = await DMMRouter02.new(factory.address, wethAddress);
+  const router = await KSRouter02.new(factory.address, wethAddress);
   console.log('Router deployed to:', router.address);
 }
 

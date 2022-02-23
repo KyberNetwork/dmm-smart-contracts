@@ -78,8 +78,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
-        uint256 finalFee = (_feeBps * PRECISION) / BPS;
-        feeInPrecision = getFinalFee(finalFee, _ampBps);
+        feeInPrecision = (_feeBps * PRECISION) / BPS;
     }
 
     /// @dev this low-level function should be called from a contract
@@ -361,21 +360,5 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
     function safeUint112(uint256 x) internal pure returns (uint112) {
         require(x <= MAX_UINT112, "KS: OVERFLOW");
         return uint112(x);
-    }
-
-    function getFinalFee(uint256 _feeInPrecisions, uint32 _ampBps)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (_ampBps <= 20000) {
-            return _feeInPrecisions;
-        } else if (_ampBps <= 50000) {
-            return (_feeInPrecisions * 20) / 30;
-        } else if (_ampBps <= 200000) {
-            return (_feeInPrecisions * 10) / 30;
-        } else {
-            return (_feeInPrecisions * 4) / 30;
-        }
     }
 }
