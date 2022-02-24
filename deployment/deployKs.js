@@ -3,8 +3,10 @@ const KSRouter02 = artifacts.require('KSRouter02');
 const BN = web3.utils.BN;
 
 async function main() {
-  const wethAddress = '0xc778417e063141139fce010982780140aa0cd5ab';
+  const wethAddress = '0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681';
   const accounts = await web3.eth.getAccounts();
+
+  console.log(`Deployer: ${accounts[0]}`);
 
   // We get the contract to deploy
   const factory = await KSFactory.new(accounts[0]);

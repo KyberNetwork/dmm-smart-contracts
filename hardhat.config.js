@@ -68,7 +68,7 @@ module.exports = {
         //   0x68dfc526037e9030c8f813d014919cc89e7d4d74
         //   0x26c43a1d431a4e5ee86cd55ed7ef9edf3641e901
         {
-          privateKey: '0xc5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122',
+          privateKey: '7cdacbed2bb84ba6d76819ef2e9ac18829c6b45d06ae57592e855fa212b4428f',
           balance: '100000000000000000000000000000000',
         },
         {
@@ -228,6 +228,12 @@ module.exports.networks.avax = {
 
 module.exports.networks.fantom = {
   url: `https://rpc.ftm.tools/`,
+  accounts: [PRIVATE_KEY],
+  timeout: 20000,
+};
+
+module.exports.networks.arbitrum = {
+  url: 'https://rinkeby.arbitrum.io/rpc',
   accounts: [PRIVATE_KEY],
   timeout: 20000,
 };
