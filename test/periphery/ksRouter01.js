@@ -33,7 +33,7 @@ let initTokenAmount = Helper.expandTo18Decimals(1000);
 const BNOne = new BN(1);
 const MaxUint256 = new BN(2).pow(new BN(256)).sub(BNOne);
 
-contract('KSRouter', function (accounts) {
+contract('KSRouter01', function (accounts) {
   before('setup', async () => {
     feeToSetter = accounts[0];
     trader = accounts[1];
@@ -777,9 +777,9 @@ contract('KSRouter', function (accounts) {
       Helper.assertEqual(swapAmount, amounts[0]);
 
       // special case virtual balance is not enough for trade
-      let bigAmountIn = await dmmHelper.getAmountIn(token1Amount, token0, pool);
+      let bigAmountIn = await dmmHelper.getAmountInV2(token1Amount, token0, pool);
       await expectRevert(router.getAmountsOut(bigAmountIn, poolsPath, path), 'KSLibrary: INSUFFICIENT_LIQUIDITY');
-      bigAmountIn = await dmmHelper.getAmountIn(token1Amount.sub(new BN(1)), token0, pool);
+      bigAmountIn = await dmmHelper.getAmountInV2(token1Amount.sub(new BN(1)), token0, pool);
       amounts = await router.getAmountsOut(bigAmountIn, poolsPath, path);
 
       await token0.approve(router.address, bigAmountIn, {from: trader});
