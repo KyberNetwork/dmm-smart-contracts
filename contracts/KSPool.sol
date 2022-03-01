@@ -186,7 +186,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
             if (amount0Out > 0) _token0.safeTransfer(to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _token1.safeTransfer(to, amount1Out); // optimistically transfer tokens
             if (callbackData.length > 0)
-                IKSCallee(to).dmmSwapCall(msg.sender, amount0Out, amount1Out, callbackData);
+                IKSCallee(to).ksSwapCall(msg.sender, amount0Out, amount1Out, callbackData);
             newData.reserve0 = _token0.balanceOf(address(this));
             newData.reserve1 = _token1.balanceOf(address(this));
             if (isAmpPool) {

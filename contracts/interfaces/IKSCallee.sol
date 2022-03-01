@@ -2,7 +2,7 @@
 pragma solidity 0.6.12;
 
 interface IKSCallee {
-    function dmmSwapCall(
+    function ksSwapCall(
         address sender,
         uint256 amount0,
         uint256 amount1,
