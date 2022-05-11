@@ -28,13 +28,11 @@ module.exports.getAmountIn = async (amountOut, tokenIn, pool) => {
   return (amountIn = numerator.add(denominator.sub(new BN(1))).div(denominator));
 };
 
-module.exports.getFee = (totalSuppy, k, kLast, governmentFeeBps) => {
-  const rootK = Helper.sqrt(k);
-  const rootKLast = Helper.sqrt(kLast);
+module.exports.getFee = (totalSuppy, collectedFee0, poolValueInToken0, governmentFeeBps) => {
   return totalSuppy
-    .mul(rootK.sub(rootKLast))
+    .mul(collectedFee0)
     .mul(governmentFeeBps)
-    .div(rootK.add(rootKLast).mul(new BN(5000)));
+    .div(poolValueInToken0.sub(collectedFee0).mul(new BN(5000)));
 };
 
 // get price range of token1 / token0

@@ -324,18 +324,20 @@ contract DMMPool is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
         (address feeTo, uint16 governmentFeeBps) = factory.getFeeConfiguration();
         feeOn = feeTo != address(0);
         uint256 _kLast = kLast; // gas savings
+        uint256 _vReserve0 = isAmpPool ? data.vReserve0 : data.reserve0; // gas savings
+        uint256 _vReserve1 = isAmpPool ? data.vReserve1 : data.reserve1; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
-                uint256 rootK = MathExt.sqrt(getK(isAmpPool, data));
-                uint256 rootKLast = MathExt.sqrt(_kLast);
-                if (rootK > rootKLast) {
-                    uint256 numerator = totalSupply().mul(rootK.sub(rootKLast)).mul(
-                        governmentFeeBps
-                    );
-                    uint256 denominator = rootK.add(rootKLast).mul(5000);
-                    uint256 liquidity = numerator / denominator;
-                    if (liquidity > 0) _mint(feeTo, liquidity);
-                }
+                uint256 collectedFee0 = _vReserve0.sub(
+                    MathExt.sqrt(_kLast.mul(_vReserve0).div(_vReserve1))
+                );
+                uint256 poolValueInToken0 = data.reserve0.add(
+                    data.reserve1.mul(_vReserve0).div(_vReserve1)
+                );
+                uint256 numerator = totalSupply().mul(collectedFee0).mul(governmentFeeBps);
+                uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(5000);
+                uint256 liquidity = numerator / denominator;
+                if (liquidity > 0) _mint(feeTo, liquidity);
             }
         } else if (_kLast != 0) {
             kLast = 0;
