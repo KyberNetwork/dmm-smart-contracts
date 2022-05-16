@@ -588,8 +588,13 @@ contract('DMMPool', function (accounts) {
       await pool.transfer(pool.address, expectedLiquidity.sub(MINIMUM_LIQUIDITY), {from: liquidityProvider});
       await pool.burn(liquidityProvider);
 
-      const k = token1Amount.add(swapAmount).mul(token0Amount.sub(amountOut));
-      let fee = await dmmHelper.getFee(totalSuppy, k, kLast, governmentFeeBps);
+      let _token1Amount = token1Amount.add(swapAmount);
+      let _token0Amount = token0Amount.sub(amountOut);
+      let _vToken0Amount = _token0Amount;
+      let _vToken1Amount = _token1Amount;
+      let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
+      let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
+      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentFeeBps);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
@@ -637,8 +642,13 @@ contract('DMMPool', function (accounts) {
       await pool.transfer(pool.address, expectedLiquidity.sub(MINIMUM_LIQUIDITY), {from: liquidityProvider});
       await pool.burn(liquidityProvider);
 
-      const k = vToken1Amount.add(swapAmount).mul(vToken0Amount.sub(amountOut));
-      let fee = dmmHelper.getFee(totalSuppy, k, kLast, governmentFeeBps);
+      let _vToken1Amount = vToken1Amount.add(swapAmount);
+      let _vToken0Amount = vToken0Amount.sub(amountOut);
+      let _token1Amount = token1Amount.add(swapAmount);
+      let _token0Amount = token0Amount.sub(amountOut);
+      let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
+      let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
+      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentFeeBps);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);

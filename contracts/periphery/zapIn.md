@@ -3,13 +3,14 @@
 Pls add **[MathJax plugin](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima)** to view math formulas for this page.
 
 Assume that:
+
 - $r_{in}$, $r_{out}$, $v_{in}$, $v_{out}$ are the real balance and virtual balance of token input and the other
 - $u_{in}$ is the amount of input token
 - $x_1$ is the amount to swap to $y$ of the other token and and $x_2$ is the amount to add liquidity to the pool
 - r is equals to 1 - fee
 
 We will have
-$x_1 + x_2 = u_{in}$  (1)
+$x_1 + x_2 = u_{in}$ (1)
 When swap token in to tokenOut
 $(r * x_1 + v_{in})*(v_{out} - y) = v_{in} * v_{out}$
 <=> $r * x_1 * v_{out}= y * (r * x_1 + v_{in})$ (2)
@@ -27,7 +28,8 @@ $(r * x_1 + v_{in}) * r_{out} * (u_{in} - x_1)= (r_{in}+u_{in}) * r * x_1 * v_{o
 <=> $r * r_{out} * x_1^2 + ((r_{in}+u_{in}) * r  * v_{out}  + r_{out} * (u_{in} * r - v_{in}))*x_1 - r_{out} * u_{in} * v_{in} = 0$
 <=> $r * x_1^2 + (\frac{u_{in} * (v_{out} - r_{out}) + v_{out} * r_{in}}{r_{out}} * r+ v_{in})*x_1  + u_{in} * v_{in} = 0$
 <=> $a * x_1^2 + b * x_1 + c =0$
-with 
+with
+
 - $b = [r_{in} * v_{out} * r  + r * u_{in}(v_{out} - r_{out}) ] / r_{out} + v_{in}$
 - $a = r$
 - $c = u_{in} * v_{in}$
@@ -39,7 +41,7 @@ a = 0.997
 $b = 1.997 * r_{in}$
 $c=u_{in} * r_{in}$
 
-$x_1 =\frac{\sqrt{3,988009 * r_{in}^2 + 4 * 0.997 * r_{in} * u_{in}} -  1.997 * r_{in}}{1.994}$ 
+$x_1 =\frac{\sqrt{3,988009 * r_{in}^2 + 4 * 0.997 * r_{in} * u_{in}} -  1.997 * r_{in}}{1.994}$
 
 This math can be found [here](https://etherscan.io/address/0x6d9893fa101cd2b1f8d1a12de3189ff7b80fdc10#code#F3#L1)
 
