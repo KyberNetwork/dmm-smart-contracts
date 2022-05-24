@@ -314,7 +314,7 @@ contract ZapInV2 {
     {
         totalSupply = IERC20(address(pool)).totalSupply();
 
-        (address feeTo, uint16 governmentFeeBps) = factory.getFeeConfiguration();
+        (address feeTo, uint24 governmentFeeBps) = factory.getFeeConfiguration();
         if (feeTo == address(0)) return totalSupply;
 
         uint256 _kLast = pool.kLast();

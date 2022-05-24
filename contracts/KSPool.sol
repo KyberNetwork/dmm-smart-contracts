@@ -19,7 +19,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 internal constant MAX_UINT112 = 2**112 - 1;
-    uint256 internal constant BPS = 10000;
+    uint256 internal constant BPS = 100000;
 
     struct ReserveData {
         uint256 reserve0;
@@ -72,7 +72,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
         IERC20 _token0,
         IERC20 _token1,
         uint32 _ampBps,
-        uint16 _feeBps
+        uint24 _feeBps
     ) external {
         require(msg.sender == address(factory), "KS: FORBIDDEN");
         token0 = _token0;
@@ -321,7 +321,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
 
     /// @dev if fee is on, mint liquidity equivalent to configured fee of the growth in sqrt(k)
     function _mintFee(bool isAmpPool, ReserveData memory data) internal returns (bool feeOn) {
-        (address feeTo, uint16 governmentFeeBps) = factory.getFeeConfiguration();
+        (address feeTo, uint24 governmentFeeBps) = factory.getFeeConfiguration();
         feeOn = feeTo != address(0);
         uint256 _kLast = kLast; // gas savings
         uint256 _vReserve0 = isAmpPool ? data.vReserve0 : data.reserve0; // gas savings

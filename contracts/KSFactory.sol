@@ -9,14 +9,14 @@ import "./KSPool.sol";
 contract KSFactory is IKSFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint256 internal constant BPS = 10000;
+    uint256 internal constant BPS = 100000;
 
     address private feeTo;
-    uint16 private governmentFeeBps;
+    uint24 private governmentFeeBps;
     address public override feeToSetter;
 
     /// @dev fee to set for pools
-    mapping(uint16 => bool) public feeOptions;
+    mapping(uint24 => bool) public feeOptions;
 
     mapping(IERC20 => mapping(IERC20 => EnumerableSet.AddressSet)) internal tokenPools;
     mapping(IERC20 => mapping(IERC20 => address)) public override getUnamplifiedPool;
@@ -27,12 +27,12 @@ contract KSFactory is IKSFactory {
         IERC20 indexed token1,
         address pool,
         uint32 ampBps,
-        uint16 feeBps,
+        uint24 feeBps,
         uint256 totalPool
     );
-    event SetFeeConfiguration(address feeTo, uint16 governmentFeeBps);
-    event EnableFeeOption(uint16 feeBps);
-    event DisableFeeOption(uint16 feeBps);
+    event SetFeeConfiguration(address feeTo, uint24 governmentFeeBps);
+    event EnableFeeOption(uint24 feeBps);
+    event DisableFeeOption(uint24 feeBps);
     event SetFeeToSetter(address feeToSetter);
 
     modifier onlyFeeSetter() {
@@ -43,18 +43,19 @@ contract KSFactory is IKSFactory {
     constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
 
-        feeOptions[1] = true;
-        feeOptions[5] = true;
-        feeOptions[30] = true;
+        feeOptions[8] = true;
+        feeOptions[10] = true;
         feeOptions[50] = true;
-        feeOptions[100] = true;
+        feeOptions[300] = true;
+        feeOptions[500] = true;
+        feeOptions[1000] = true;
     }
 
     function createPool(
         IERC20 tokenA,
         IERC20 tokenB,
         uint32 ampBps,
-        uint16 feeBps
+        uint24 feeBps
     ) external override returns (address pool) {
         require(tokenA != tokenB, "KS: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
@@ -65,7 +66,7 @@ contract KSFactory is IKSFactory {
             ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
             "KS: UNAMPLIFIED_POOL_EXISTS"
         );
-        require(feeOptions[feeBps], "KS: FEE_OPTION_NOT_EXISTS");
+        require(feeBps > 0 && feeOptions[feeBps], "KS: FEE_OPTION_NOT_EXISTS");
         pool = address(new KSPool());
         KSPool(pool).initialize(token0, token1, ampBps, feeBps);
         // populate mapping in the reverse direction
@@ -80,26 +81,26 @@ contract KSFactory is IKSFactory {
         emit PoolCreated(token0, token1, pool, ampBps, feeBps, allPools.length);
     }
 
-    function setFeeConfiguration(address _feeTo, uint16 _governmentFeeBps)
+    function setFeeConfiguration(address _feeTo, uint24 _governmentFeeBps)
         external
         override
         onlyFeeSetter
     {
-        require(_governmentFeeBps > 0 && _governmentFeeBps < 2000, "KS: INVALID FEE");
+        require(_governmentFeeBps > 0 && _governmentFeeBps < 20000, "KS: INVALID FEE");
         feeTo = _feeTo;
         governmentFeeBps = _governmentFeeBps;
 
         emit SetFeeConfiguration(_feeTo, _governmentFeeBps);
     }
 
-    function enableFeeOption(uint16 _feeBps) external override onlyFeeSetter {
+    function enableFeeOption(uint24 _feeBps) external override onlyFeeSetter {
         require(_feeBps > 0, "KS: INVALID FEE");
         feeOptions[_feeBps] = true;
 
         emit EnableFeeOption(_feeBps);
     }
 
-    function disableFeeOption(uint16 _feeBps) external override onlyFeeSetter {
+    function disableFeeOption(uint24 _feeBps) external override onlyFeeSetter {
         require(_feeBps > 0, "KS: INVALID FEE");
         feeOptions[_feeBps] = false;
 
@@ -116,7 +117,7 @@ contract KSFactory is IKSFactory {
         external
         override
         view
-        returns (address _feeTo, uint16 _governmentFeeBps)
+        returns (address _feeTo, uint24 _governmentFeeBps)
     {
         _feeTo = feeTo;
         _governmentFeeBps = governmentFeeBps;
