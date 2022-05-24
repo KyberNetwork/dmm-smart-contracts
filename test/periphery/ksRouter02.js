@@ -41,7 +41,7 @@ contract('KSRouter02', (accounts) => {
     factory = await KSFactory.new(feeSetter);
     router = await KSRouter02.new(factory.address, weth.address);
     // make a DTT<>WETH pool
-    await factory.createPool(feeToken.address, weth.address, new BN(10000), new BN(1));
+    await factory.createPool(feeToken.address, weth.address, new BN(100000), new BN(10));
     const poolAddresses = await factory.getPools(feeToken.address, weth.address);
     pool = await KSPool.at(poolAddresses[0]);
   });
@@ -195,7 +195,7 @@ contract('KSRouter02', (accounts) => {
     const feeToken2 = await FeeToken.new('feeOnTransfer Token2', 'FOT2', expandTo18Decimals(100000));
 
     /// create pool
-    await factory.createPool(feeToken.address, feeToken2.address, new BN(10000), new BN(1));
+    await factory.createPool(feeToken.address, feeToken2.address, new BN(100000), new BN(10));
     const poolAddresses = await factory.getPools(feeToken.address, feeToken2.address);
     tokenPool = await KSPool.at(poolAddresses[poolAddresses.length - 1]);
 

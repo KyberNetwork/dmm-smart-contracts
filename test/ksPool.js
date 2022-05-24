@@ -21,9 +21,9 @@ let feeTo;
 let liquidityProvider;
 let app;
 
-let ampBps = new BN(20000);
-let unamplifiedBps = new BN(10000);
-let feeBps = new BN(1);
+let ampBps = new BN(200000);  // 2
+let unamplifiedBps = new BN(100000);  // 1
+let feeBps = new BN(10);  // 0.01%
 
 contract('KSPool', function (accounts) {
   before('setup', async () => {
@@ -123,7 +123,7 @@ contract('KSPool', function (accounts) {
     });
 
     it('amp pool', async () => {
-      ampBps = new BN(20000);
+      ampBps = new BN(200000); // amp = 2
       const token0Amount = Helper.expandTo18Decimals(1);
       const token1Amount = Helper.expandTo18Decimals(4);
       [factory, pool] = await setupPool(admin, token0, token1, ampBps);
@@ -142,8 +142,8 @@ contract('KSPool', function (accounts) {
       expectEvent(result, 'Sync', {
         reserve0: token0Amount,
         reserve1: token1Amount,
-        vReserve0: token0Amount.mul(ampBps).div(Helper.BPS),
-        vReserve1: token1Amount.mul(ampBps).div(Helper.BPS),
+        vReserve0: token0Amount.mul(ampBps).div(Helper.KS_BPS),
+        vReserve1: token1Amount.mul(ampBps).div(Helper.KS_BPS),
       });
 
       Helper.assertEqual(await pool.totalSupply(), expectedLiquidity, 'unexpected totalSupply');
@@ -272,7 +272,7 @@ contract('KSPool', function (accounts) {
       // balance of token1 should increase by amountOut
       Helper.assertEqual(await token1.balanceOf(trader), beforeBalanceToken1.add(amountOut));
       // this number of uniswap is 73462
-      console.log(`amp pool swap gasUsed = ${txResult.receipt.gasUsed}`);
+      // console.log(`amp pool swap gasUsed = ${txResult.receipt.gasUsed}`);
     });
 
     it('swap:token0 unamplified pool', async () => {
@@ -327,10 +327,11 @@ contract('KSPool', function (accounts) {
       // balance of token1 should increase by amountOut
       Helper.assertEqual(await token1.balanceOf(trader), beforeBalanceToken1.add(amountOut));
       // this number of uniswap is 73462
-      console.log(`unamplified pool swap gasUsed = ${txResult.receipt.gasUsed}`);
+      // console.log(`unamplified pool swap gasUsed = ${txResult.receipt.gasUsed}`);
     });
 
-    [20000, 50000, 200000, 1000000].forEach((ampBPS) => {
+    // ampBPS: [2, 5, 20, 100]
+    [200000, 500000, 2000000, 10000000].forEach((ampBPS) => {
       it(`swap: token0 stable pool ampBPS = ${ampBPS}`, async () => {
         [factory, pool] = await setupPool(admin, token0, token1, new BN(ampBPS));
         const token0Amount = expandTo18Decimals(10);
@@ -339,7 +340,7 @@ contract('KSPool', function (accounts) {
 
         await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
         let tradeInfo = await pool.getTradeInfo();
-        console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
+        // console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
 
         let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0, pool);
 
@@ -350,7 +351,7 @@ contract('KSPool', function (accounts) {
         await expectRevert(pool.swap(new BN(0), amountOut.add(new BN(1)), trader, '0x', {from: app}), 'KS: K');
 
         let result = await pool.swap(new BN(0), amountOut, trader, '0x', {from: app});
-        console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
+        // console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
 
         await assertTokenPoolBalances(token0, token1, pool.address, [
           token0Amount.add(swapAmount),
@@ -372,7 +373,7 @@ contract('KSPool', function (accounts) {
         await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
         let tradeInfo = await pool.getTradeInfo();
-        console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
+        // console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
         let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
 
         let beforeBalanceToken0 = await token0.balanceOf(trader);
@@ -382,7 +383,7 @@ contract('KSPool', function (accounts) {
         await expectRevert(pool.swap(amountOut.add(new BN(1)), new BN(0), trader, '0x', {from: app}), 'KS: K');
 
         let result = await pool.swap(amountOut, new BN(0), trader, '0x', {from: app});
-        console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
+        // console.log(`stable pool gasUsed = ${result.receipt.gasUsed}`);
 
         await assertTokenPoolBalances(token0, token1, pool.address, [
           token0Amount.sub(amountOut),
@@ -532,7 +533,7 @@ contract('KSPool', function (accounts) {
         beforeBalances[0].add(token0Amount.sub(MINIMUM_LIQUIDITY)),
         beforeBalances[1].add(token1Amount.sub(MINIMUM_LIQUIDITY)),
       ]);
-      console.log(`burn gas used ${result.receipt.gasUsed}`);
+      // console.log(`burn gas used ${result.receipt.gasUsed}`);
     });
 
     it('burn amp pool', async () => {
@@ -565,8 +566,8 @@ contract('KSPool', function (accounts) {
       expectEvent(result, 'Sync', {
         reserve0: new BN(500),
         reserve1: new BN(2000),
-        vReserve0: new BN(500).mul(ampBps).div(Helper.BPS),
-        vReserve1: new BN(2000).mul(ampBps).div(Helper.BPS),
+        vReserve0: new BN(500).mul(ampBps).div(Helper.KS_BPS),
+        vReserve1: new BN(2000).mul(ampBps).div(Helper.KS_BPS),
       });
 
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), new BN(0));
@@ -577,7 +578,7 @@ contract('KSPool', function (accounts) {
         beforeBalances[0].add(token0Amount.sub(new BN(500))),
         beforeBalances[1].add(token1Amount.sub(new BN(2000))),
       ]);
-      console.log(`burn gas used ${result.receipt.gasUsed}`);
+      // console.log(`burn gas used ${result.receipt.gasUsed}`);
     });
   });
 
@@ -637,8 +638,8 @@ contract('KSPool', function (accounts) {
     it('feeTo:on amp pool', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
-      const vToken0Amount = token0Amount.mul(ampBps).div(Helper.BPS);
-      const vToken1Amount = token1Amount.mul(ampBps).div(Helper.BPS);
+      const vToken0Amount = token0Amount.mul(ampBps).div(Helper.KS_BPS);
+      const vToken1Amount = token1Amount.mul(ampBps).div(Helper.KS_BPS);
       const governmentFeeBps = new BN(1000);
 
       [factory, pool] = await setupPool(admin, token0, token1, ampBps);
@@ -741,14 +742,14 @@ contract('KSPool', function (accounts) {
 
       let tradeInfo = await pool.getTradeInfo();
       let priceRange = dmmHelper.getPriceRange(tradeInfo);
-      console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+      // console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
 
       await token0.transfer(pool.address, expandTo18Decimals(2));
       await pool.sync();
 
       tradeInfo = await pool.getTradeInfo();
       priceRange = dmmHelper.getPriceRange(tradeInfo);
-      console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
+      // console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
     });
 
     it('case 2: donation from 2 side -> reserve data should scale up', async () => {
