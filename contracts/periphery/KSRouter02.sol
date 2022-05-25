@@ -181,7 +181,7 @@ contract KSRouter02 is IKSRouter02 {
                 tokenA,
                 tokenB,
                 ampBpsAndFeeBps[0],
-                uint16(ampBpsAndFeeBps[1])
+                uint24(ampBpsAndFeeBps[1])
             );
         }
         // if we add liquidity to an existing pool, this is an unamplifed pool
@@ -228,7 +228,7 @@ contract KSRouter02 is IKSRouter02 {
                 token,
                 weth,
                 ampBpsAndFeeBps[0],
-                uint16(ampBpsAndFeeBps[1])
+                uint24(ampBpsAndFeeBps[1])
             );
         }
         // if we add liquidity to an existing pool, this is an unamplifed pool

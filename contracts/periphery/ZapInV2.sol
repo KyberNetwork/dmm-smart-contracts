@@ -314,7 +314,7 @@ contract ZapInV2 {
     {
         totalSupply = IERC20(address(pool)).totalSupply();
 
-        (address feeTo, uint16 governmentFeeBps) = factory.getFeeConfiguration();
+        (address feeTo, uint24 governmentFeeUnits) = factory.getFeeConfiguration();
         if (feeTo == address(0)) return totalSupply;
 
         uint256 _kLast = pool.kLast();
@@ -323,7 +323,7 @@ contract ZapInV2 {
         uint256 rootKLast = MathExt.sqrt(_kLast);
         uint256 rootK = MathExt.sqrt(data.vIn * data.vOut);
 
-        uint256 numerator = totalSupply.mul(rootK.sub(rootKLast)).mul(governmentFeeBps);
+        uint256 numerator = totalSupply.mul(rootK.sub(rootKLast)).mul(governmentFeeUnits);
         uint256 denominator = rootK.add(rootKLast).mul(5000);
         uint256 liquidity = numerator / denominator;
 

@@ -57,11 +57,11 @@ contract('KSRouter01', function (accounts) {
   beforeEach('setup', async () => {
     factory = await KSFactory.new(accounts[0]);
     /// create pool tokenA and tokenB
-    await factory.createPool(token0.address, token1.address, new BN(10000), new BN(1));
+    await factory.createPool(token0.address, token1.address, Helper.BPS, new BN(10));
     const poolAddrs = await factory.getPools(token0.address, token1.address);
     pool = await KSPool.at(poolAddrs[0]);
     /// create pool weth and ethPartner
-    await factory.createPool(weth.address, ethPartner.address, new BN(10000), new BN(1));
+    await factory.createPool(weth.address, ethPartner.address, Helper.BPS, new BN(10));
     const wethPoolAddresses = await factory.getPools(weth.address, ethPartner.address);
     ethPool = await KSPool.at(wethPoolAddresses[0]);
     /// create router
@@ -89,7 +89,7 @@ contract('KSRouter01', function (accounts) {
       let result = await router.addLiquidityNewPool(
         tokenA.address,
         tokenB.address,
-        [new BN(20000), new BN(1)],
+        [new BN(20000), new BN(10)],
         tokenAAmount,
         tokenBAmount,
         0,
@@ -113,7 +113,7 @@ contract('KSRouter01', function (accounts) {
       result = await router.addLiquidityNewPool(
         tokenB.address,
         tokenA.address,
-        [new BN(10000), new BN(1)],
+        [new BN(10000), new BN(10)],
         tokenBAmount,
         tokenAAmount,
         0,
@@ -133,7 +133,7 @@ contract('KSRouter01', function (accounts) {
       result = await router.addLiquidityNewPool(
         tokenB.address,
         tokenA.address,
-        [new BN(10000), new BN(1)],
+        [new BN(10000), new BN(10)],
         tokenBAmount,
         tokenAAmount,
         0,
@@ -157,7 +157,7 @@ contract('KSRouter01', function (accounts) {
       // amp-pool
       let result = await router.addLiquidityNewPoolETH(
         token.address,
-        [new BN(20000), new BN(1)],
+        [new BN(20000), new BN(10)],
         tokenAmount,
         0,
         0,
@@ -179,7 +179,7 @@ contract('KSRouter01', function (accounts) {
       // unamplified pool
       result = await router.addLiquidityNewPoolETH(
         token.address,
-        [new BN(10000), new BN(1)],
+        [new BN(10000), new BN(10)],
         tokenAmount,
         0,
         0,
@@ -197,7 +197,7 @@ contract('KSRouter01', function (accounts) {
       // addliquidity for unamplified again
       result = await router.addLiquidityNewPoolETH(
         token.address,
-        [new BN(10000), new BN(1)],
+        [new BN(10000), new BN(10)],
         tokenAmount,
         0,
         0,
@@ -747,7 +747,7 @@ contract('KSRouter01', function (accounts) {
 
   describe('test query rate function', async () => {
     it('getAmountOut', async () => {
-      let [factory, pool] = await setupPool(feeToSetter, token0, token1, new BN(20000), new BN(1));
+      let [factory, pool] = await setupPool(feeToSetter, token0, token1, new BN(20000), new BN(10));
       let router = await KSRouter.new(factory.address, weth.address);
       const token0Amount = Helper.expandTo18Decimals(5);
       const token1Amount = Helper.expandTo18Decimals(10);
@@ -795,7 +795,7 @@ contract('KSRouter01', function (accounts) {
     });
 
     it('getAmountIn', async () => {
-      [factory, pool] = await setupPool(feeToSetter, token0, token1, new BN(20000), new BN(1));
+      [factory, pool] = await setupPool(feeToSetter, token0, token1, new BN(20000), new BN(10));
       let router = await KSRouter.new(factory.address, weth.address);
       const token0Amount = Helper.expandTo18Decimals(5);
       const token1Amount = Helper.expandTo18Decimals(10);
@@ -1228,7 +1228,7 @@ contract('KSRouter01', function (accounts) {
       let token2 = await TestToken.new('test token C', 'C', Helper.expandTo18Decimals(100000));
       token2.transfer(trader, initTokenAmount);
 
-      await factory.createPool(token1.address, token2.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, token2.address, new BN(200000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, token2.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(15));
@@ -1262,7 +1262,7 @@ contract('KSRouter01', function (accounts) {
       let token2 = await TestToken.new('test token C', 'C', Helper.expandTo18Decimals(100000));
       token2.transfer(trader, initTokenAmount);
 
-      await factory.createPool(token1.address, token2.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, token2.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, token2.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(15));
@@ -1287,7 +1287,7 @@ contract('KSRouter01', function (accounts) {
     });
 
     it('swapExactTokensForETH', async () => {
-      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, weth.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(15));
@@ -1322,7 +1322,7 @@ contract('KSRouter01', function (accounts) {
     });
 
     it('swapExactETHForTokens', async () => {
-      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, weth.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(12));
@@ -1348,7 +1348,7 @@ contract('KSRouter01', function (accounts) {
     });
 
     it('swapTokensForExactETH', async () => {
-      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, weth.address, new BN(200000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, weth.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(15));
@@ -1374,7 +1374,7 @@ contract('KSRouter01', function (accounts) {
     });
 
     it('swapETHForExactTokens', async () => {
-      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(1));
+      await factory.createPool(token1.address, weth.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token1.address, weth.address);
       let pool2 = await KSPool.at(poolAddrs[0]);
       await token1.transfer(pool2.address, Helper.expandTo18Decimals(12));
@@ -1406,7 +1406,7 @@ contract('KSRouter01', function (accounts) {
       const token0Amount = Helper.expandTo18Decimals(2);
       const token1Amount = Helper.expandTo18Decimals(8);
       // create a new pool
-      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(1));
+      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token0.address, token1.address);
       let pool = await KSPool.at(poolAddrs[poolAddrs.length - 1]);
       await token0.transfer(pool.address, token0Amount);
@@ -1438,7 +1438,7 @@ contract('KSRouter01', function (accounts) {
       const token0Amount = Helper.expandTo18Decimals(2);
       const token1Amount = Helper.expandTo18Decimals(8);
       // create a new pool
-      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(1));
+      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token0.address, token1.address);
       let pool = await KSPool.at(poolAddrs[poolAddrs.length - 1]);
       await token0.transfer(pool.address, token0Amount);
@@ -1475,7 +1475,7 @@ contract('KSRouter01', function (accounts) {
       const token0Amount = Helper.expandTo18Decimals(2);
       const token1Amount = Helper.expandTo18Decimals(8);
       // create a new pool
-      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(1));
+      await factory.createPool(token0.address, token1.address, new BN(20000), new BN(10));
       const poolAddrs = await factory.getPools(token0.address, token1.address);
       let pool = await KSPool.at(poolAddrs[poolAddrs.length - 1]);
       await token0.transfer(pool.address, token0Amount);
