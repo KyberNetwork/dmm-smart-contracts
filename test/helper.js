@@ -6,7 +6,7 @@ const zeroBN = new BN(0);
 const ethAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 const MaxUint256 = new BN(2).pow(new BN(256)).sub(new BN(1));
 const BPS = new BN(10000);
-const KS_BPS = new BN(100000);
+const FEE_UNITS = new BN(100000);
 const Q112 = new BN(2).pow(new BN(112));
 
 require('chai')
@@ -23,7 +23,7 @@ module.exports = {
   MINIMUM_LIQUIDITY,
   MaxUint256,
   BPS,
-  KS_BPS,
+  FEE_UNITS,
   Q112
 };
 

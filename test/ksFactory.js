@@ -25,8 +25,8 @@ contract('KSFactory', function (accounts) {
   });
 
   it('create pool', async () => {
-    const unamplifiedBps = new BN(100000);
-    const ampBps = new BN(200000);
+    const unamplifiedBps = Helper.BPS;
+    const ampBps = new BN(20000);
     const feeBps = new BN(300);
     await expectRevert(factory.createPool(tokenA.address, constants.ZERO_ADDRESS, unamplifiedBps, feeBps), 'KS: ZERO_ADDRESS');
 

@@ -21,9 +21,9 @@ let feeTo;
 let liquidityProvider;
 let app;
 
-let ampBps = new BN(200000);  // 2
-let unamplifiedBps = new BN(100000);  // 1
-let feeBps = new BN(10);  // 0.01%
+let ampBps = new BN(20000);  // 2
+let unamplifiedBps = Helper.BPS;  // 1
+let feeUnits = new BN(10);  // 0.01%
 
 contract('KSPool', function (accounts) {
   before('setup', async () => {
@@ -56,21 +56,21 @@ contract('KSPool', function (accounts) {
 
   it('can not initialize not by factory', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
-    await expectRevert(pool.initialize(token0.address, token1.address, unamplifiedBps, feeBps), 'KS: FORBIDDEN');
+    await expectRevert(pool.initialize(token0.address, token1.address, unamplifiedBps, feeUnits), 'KS: FORBIDDEN');
   });
 
   it('enable fee option', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
     const newFeeOption = new BN(10);
     let result = await factory.enableFeeOption(newFeeOption);
-    expectEvent(result, 'EnableFeeOption', {feeBps: newFeeOption});
+    expectEvent(result, 'EnableFeeOption', {feeUnits: newFeeOption});
   });
 
   it('disable fee option', async () => {
     [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
     const newFeeOption = new BN(10);
     let result = await factory.disableFeeOption(newFeeOption);
-    expectEvent(result, 'DisableFeeOption', {feeBps: newFeeOption});
+    expectEvent(result, 'DisableFeeOption', {feeUnits: newFeeOption});
   });
 
   describe('mint', async () => {
@@ -123,7 +123,7 @@ contract('KSPool', function (accounts) {
     });
 
     it('amp pool', async () => {
-      ampBps = new BN(200000); // amp = 2
+      ampBps = new BN(20000); // amp = 2
       const token0Amount = Helper.expandTo18Decimals(1);
       const token1Amount = Helper.expandTo18Decimals(4);
       [factory, pool] = await setupPool(admin, token0, token1, ampBps);
@@ -142,8 +142,8 @@ contract('KSPool', function (accounts) {
       expectEvent(result, 'Sync', {
         reserve0: token0Amount,
         reserve1: token1Amount,
-        vReserve0: token0Amount.mul(ampBps).div(Helper.KS_BPS),
-        vReserve1: token1Amount.mul(ampBps).div(Helper.KS_BPS),
+        vReserve0: token0Amount.mul(ampBps).div(Helper.BPS),
+        vReserve1: token1Amount.mul(ampBps).div(Helper.BPS),
       });
 
       Helper.assertEqual(await pool.totalSupply(), expectedLiquidity, 'unexpected totalSupply');
@@ -331,7 +331,7 @@ contract('KSPool', function (accounts) {
     });
 
     // ampBPS: [2, 5, 20, 100]
-    [200000, 500000, 2000000, 10000000].forEach((ampBPS) => {
+    [20000, 50000, 200000, 1000000].forEach((ampBPS) => {
       it(`swap: token0 stable pool ampBPS = ${ampBPS}`, async () => {
         [factory, pool] = await setupPool(admin, token0, token1, new BN(ampBPS));
         const token0Amount = expandTo18Decimals(10);
@@ -566,8 +566,8 @@ contract('KSPool', function (accounts) {
       expectEvent(result, 'Sync', {
         reserve0: new BN(500),
         reserve1: new BN(2000),
-        vReserve0: new BN(500).mul(ampBps).div(Helper.KS_BPS),
-        vReserve1: new BN(2000).mul(ampBps).div(Helper.KS_BPS),
+        vReserve0: new BN(500).mul(ampBps).div(Helper.BPS),
+        vReserve1: new BN(2000).mul(ampBps).div(Helper.BPS),
       });
 
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), new BN(0));
@@ -586,10 +586,10 @@ contract('KSPool', function (accounts) {
     it('feeTo:on unamplified pool', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
-      const governmentFeeBps = new BN(1000);
+      const governmentfeeUnits = new BN(10000);
 
       [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
-      await factory.setFeeConfiguration(feeTo, governmentFeeBps, {from: accounts[0]});
+      await factory.setFeeConfiguration(feeTo, governmentfeeUnits, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
       let totalSuppy = await pool.totalSupply();
 
@@ -612,7 +612,7 @@ contract('KSPool', function (accounts) {
       let _vToken1Amount = _token1Amount;
       let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
       let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
-      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentFeeBps);
+      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
@@ -622,7 +622,7 @@ contract('KSPool', function (accounts) {
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
 
       // disable fee again
-      await factory.setFeeConfiguration(constants.ZERO_ADDRESS, governmentFeeBps, {from: accounts[0]});
+      await factory.setFeeConfiguration(constants.ZERO_ADDRESS, governmentfeeUnits, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       tradeInfo = await pool.getTradeInfo();
@@ -638,12 +638,12 @@ contract('KSPool', function (accounts) {
     it('feeTo:on amp pool', async () => {
       const token0Amount = expandTo18Decimals(1000);
       const token1Amount = expandTo18Decimals(1000);
-      const vToken0Amount = token0Amount.mul(ampBps).div(Helper.KS_BPS);
-      const vToken1Amount = token1Amount.mul(ampBps).div(Helper.KS_BPS);
-      const governmentFeeBps = new BN(1000);
+      const vToken0Amount = token0Amount.mul(ampBps).div(Helper.BPS);
+      const vToken1Amount = token1Amount.mul(ampBps).div(Helper.BPS);
+      const governmentfeeUnits = new BN(10000);
 
       [factory, pool] = await setupPool(admin, token0, token1, ampBps);
-      await factory.setFeeConfiguration(feeTo, governmentFeeBps, {from: accounts[0]});
+      await factory.setFeeConfiguration(feeTo, governmentfeeUnits, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
       let totalSuppy = await pool.totalSupply();
 
@@ -666,7 +666,7 @@ contract('KSPool', function (accounts) {
       let _token0Amount = token0Amount.sub(amountOut);
       let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
       let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
-      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentFeeBps);
+      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
@@ -676,7 +676,7 @@ contract('KSPool', function (accounts) {
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
 
       // disable fee again
-      await factory.setFeeConfiguration(constants.ZERO_ADDRESS, governmentFeeBps, {from: accounts[0]});
+      await factory.setFeeConfiguration(constants.ZERO_ADDRESS, governmentfeeUnits, {from: accounts[0]});
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       tradeInfo = await pool.getTradeInfo();
@@ -818,7 +818,7 @@ async function setupFactory(admin) {
 async function setupPool(admin, tokenA, tokenB, ampBps) {
   let factory = await setupFactory(admin);
 
-  await factory.createPool(tokenA.address, tokenB.address, ampBps, feeBps);
+  await factory.createPool(tokenA.address, tokenB.address, ampBps, feeUnits);
   const poolAddrs = await factory.getPools(tokenA.address, tokenB.address);
   const pool = await KSPool.at(poolAddrs[0]);
 

@@ -17,7 +17,7 @@ contract KSRouter02 is IKSRouter02 {
     using SafeERC20 for IWETH;
     using SafeMath for uint256;
 
-    uint256 internal constant BPS = 100000;
+    uint256 internal constant BPS = 10000;
     uint256 internal constant MIN_VRESERVE_RATIO = 0;
     uint256 internal constant MAX_VRESERVE_RATIO = 2**256 - 1;
     uint256 internal constant Q112 = 2**112;
@@ -181,7 +181,7 @@ contract KSRouter02 is IKSRouter02 {
                 tokenA,
                 tokenB,
                 ampBpsAndFeeBps[0],
-                uint16(ampBpsAndFeeBps[1])
+                uint24(ampBpsAndFeeBps[1])
             );
         }
         // if we add liquidity to an existing pool, this is an unamplifed pool
@@ -228,7 +228,7 @@ contract KSRouter02 is IKSRouter02 {
                 token,
                 weth,
                 ampBpsAndFeeBps[0],
-                uint16(ampBpsAndFeeBps[1])
+                uint24(ampBpsAndFeeBps[1])
             );
         }
         // if we add liquidity to an existing pool, this is an unamplifed pool

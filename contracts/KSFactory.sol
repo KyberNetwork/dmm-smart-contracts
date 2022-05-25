@@ -9,10 +9,11 @@ import "./KSPool.sol";
 contract KSFactory is IKSFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint256 internal constant BPS = 100000;
+    uint256 internal constant BPS = 10000;
+    uint256 internal constant FEE_UNITS = 100000;
 
     address private feeTo;
-    uint24 private governmentFeeBps;
+    uint24 private governmentFeeUnits;
     address public override feeToSetter;
 
     /// @dev fee to set for pools
@@ -27,12 +28,12 @@ contract KSFactory is IKSFactory {
         IERC20 indexed token1,
         address pool,
         uint32 ampBps,
-        uint24 feeBps,
+        uint24 feeUnits,
         uint256 totalPool
     );
-    event SetFeeConfiguration(address feeTo, uint24 governmentFeeBps);
-    event EnableFeeOption(uint24 feeBps);
-    event DisableFeeOption(uint24 feeBps);
+    event SetFeeConfiguration(address feeTo, uint24 governmentFeeUnits);
+    event EnableFeeOption(uint24 feeUnits);
+    event DisableFeeOption(uint24 feeUnits);
     event SetFeeToSetter(address feeToSetter);
 
     modifier onlyFeeSetter() {
@@ -55,7 +56,7 @@ contract KSFactory is IKSFactory {
         IERC20 tokenA,
         IERC20 tokenB,
         uint32 ampBps,
-        uint24 feeBps
+        uint24 feeUnits
     ) external override returns (address pool) {
         require(tokenA != tokenB, "KS: IDENTICAL_ADDRESSES");
         (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
@@ -66,9 +67,9 @@ contract KSFactory is IKSFactory {
             ampBps != BPS || getUnamplifiedPool[token0][token1] == address(0),
             "KS: UNAMPLIFIED_POOL_EXISTS"
         );
-        require(feeBps > 0 && feeOptions[feeBps], "KS: FEE_OPTION_NOT_EXISTS");
+        require(feeUnits > 0 && feeOptions[feeUnits], "KS: FEE_OPTION_NOT_EXISTS");
         pool = address(new KSPool());
-        KSPool(pool).initialize(token0, token1, ampBps, feeBps);
+        KSPool(pool).initialize(token0, token1, ampBps, feeUnits);
         // populate mapping in the reverse direction
         tokenPools[token0][token1].add(pool);
         tokenPools[token1][token0].add(pool);
@@ -78,33 +79,33 @@ contract KSFactory is IKSFactory {
         }
         allPools.push(pool);
 
-        emit PoolCreated(token0, token1, pool, ampBps, feeBps, allPools.length);
+        emit PoolCreated(token0, token1, pool, ampBps, feeUnits, allPools.length);
     }
 
-    function setFeeConfiguration(address _feeTo, uint24 _governmentFeeBps)
+    function setFeeConfiguration(address _feeTo, uint24 _governmentFeeUnits)
         external
         override
         onlyFeeSetter
     {
-        require(_governmentFeeBps > 0 && _governmentFeeBps < 20000, "KS: INVALID FEE");
+        require(_governmentFeeUnits > 0 && _governmentFeeUnits < 20000, "KS: INVALID FEE");
         feeTo = _feeTo;
-        governmentFeeBps = _governmentFeeBps;
+        governmentFeeUnits = _governmentFeeUnits;
 
-        emit SetFeeConfiguration(_feeTo, _governmentFeeBps);
+        emit SetFeeConfiguration(_feeTo, _governmentFeeUnits);
     }
 
-    function enableFeeOption(uint24 _feeBps) external override onlyFeeSetter {
-        require(_feeBps > 0, "KS: INVALID FEE");
-        feeOptions[_feeBps] = true;
+    function enableFeeOption(uint24 _feeUnits) external override onlyFeeSetter {
+        require(_feeUnits > 0, "KS: INVALID FEE");
+        feeOptions[_feeUnits] = true;
 
-        emit EnableFeeOption(_feeBps);
+        emit EnableFeeOption(_feeUnits);
     }
 
-    function disableFeeOption(uint24 _feeBps) external override onlyFeeSetter {
-        require(_feeBps > 0, "KS: INVALID FEE");
-        feeOptions[_feeBps] = false;
+    function disableFeeOption(uint24 _feeUnits) external override onlyFeeSetter {
+        require(_feeUnits > 0, "KS: INVALID FEE");
+        feeOptions[_feeUnits] = false;
 
-        emit DisableFeeOption(_feeBps);
+        emit DisableFeeOption(_feeUnits);
     }
 
     function setFeeToSetter(address _feeToSetter) external override onlyFeeSetter {
@@ -117,10 +118,10 @@ contract KSFactory is IKSFactory {
         external
         override
         view
-        returns (address _feeTo, uint24 _governmentFeeBps)
+        returns (address _feeTo, uint24 _governmentFeeUnits)
     {
         _feeTo = feeTo;
-        _governmentFeeBps = governmentFeeBps;
+        _governmentFeeUnits = governmentFeeUnits;
     }
 
     function allPoolsLength() external override view returns (uint256) {

@@ -19,7 +19,8 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 internal constant MAX_UINT112 = 2**112 - 1;
-    uint256 internal constant BPS = 100000;
+    uint256 internal constant BPS = 10000;
+    uint256 internal constant FEE_UNITS = 100000;
 
     struct ReserveData {
         uint256 reserve0;
@@ -72,13 +73,13 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
         IERC20 _token0,
         IERC20 _token1,
         uint32 _ampBps,
-        uint24 _feeBps
+        uint24 _feeUnits
     ) external {
         require(msg.sender == address(factory), "KS: FORBIDDEN");
         token0 = _token0;
         token1 = _token1;
         ampBps = _ampBps;
-        feeInPrecision = (_feeBps * PRECISION) / BPS;
+        feeInPrecision = (_feeUnits * PRECISION) / FEE_UNITS;
     }
 
     /// @dev this low-level function should be called from a contract
@@ -321,7 +322,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
 
     /// @dev if fee is on, mint liquidity equivalent to configured fee of the growth in sqrt(k)
     function _mintFee(bool isAmpPool, ReserveData memory data) internal returns (bool feeOn) {
-        (address feeTo, uint24 governmentFeeBps) = factory.getFeeConfiguration();
+        (address feeTo, uint24 governmentFeeUnits) = factory.getFeeConfiguration();
         feeOn = feeTo != address(0);
         uint256 _kLast = kLast; // gas savings
         uint256 _vReserve0 = isAmpPool ? data.vReserve0 : data.reserve0; // gas savings
@@ -334,7 +335,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
                 uint256 poolValueInToken0 = data.reserve0.add(
                     data.reserve1.mul(_vReserve0).div(_vReserve1)
                 );
-                uint256 numerator = totalSupply().mul(collectedFee0).mul(governmentFeeBps);
+                uint256 numerator = totalSupply().mul(collectedFee0).mul(governmentFeeUnits);
                 uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(5000);
                 uint256 liquidity = numerator / denominator;
                 if (liquidity > 0) _mint(feeTo, liquidity);
