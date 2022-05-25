@@ -336,7 +336,7 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
                     data.reserve1.mul(_vReserve0).div(_vReserve1)
                 );
                 uint256 numerator = totalSupply().mul(collectedFee0).mul(governmentFeeUnits);
-                uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(5000);
+                uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(50000);
                 uint256 liquidity = numerator / denominator;
                 if (liquidity > 0) _mint(feeTo, liquidity);
             }

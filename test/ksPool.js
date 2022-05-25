@@ -7,7 +7,7 @@ const {assert} = require('chai');
 const BN = web3.utils.BN;
 
 const Helper = require('./helper');
-const dmmHelper = require('./dmmHelper');
+const ksHelper = require('./ksHelper');
 const {expandTo18Decimals, precisionUnits} = require('./helper');
 
 const MINIMUM_LIQUIDITY = new BN(1000);
@@ -202,7 +202,7 @@ contract('KSPool', function (accounts) {
           expandTo18Decimals(token1Amount)
         );
         await token0.transfer(pool.address, expandTo18Decimals(swapAmount));
-        let expectedOutputAmount = await dmmHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
+        let expectedOutputAmount = await ksHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
         await expectRevert(pool.swap(0, expectedOutputAmount.add(new BN(1)), trader, '0x'), 'KS: K');
         await pool.swap(0, new BN(expectedOutputAmount), trader, '0x');
       });
@@ -216,7 +216,7 @@ contract('KSPool', function (accounts) {
           expandTo18Decimals(token1Amount)
         );
         await token0.transfer(pool.address, expandTo18Decimals(swapAmount));
-        let amountOut = await dmmHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
+        let amountOut = await ksHelper.getAmountOutV2(expandTo18Decimals(swapAmount), token0, pool);
         await expectRevert(pool.swap(0, amountOut.add(new BN(1)), trader, '0x'), 'KS: K');
         await pool.swap(0, new BN(amountOut), trader, '0x');
       });
@@ -230,7 +230,7 @@ contract('KSPool', function (accounts) {
 
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0.address, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token0.address, pool);
       // when amountIn = 0 -> revert
       await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'KS: INSUFFICIENT_INPUT_AMOUNT');
 
@@ -283,7 +283,7 @@ contract('KSPool', function (accounts) {
 
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0.address, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token0.address, pool);
       // when amountIn = 0 -> revert
       await expectRevert(pool.swap(new BN(0), amountOut, trader, '0x', {from: app}), 'KS: INSUFFICIENT_INPUT_AMOUNT');
 
@@ -342,7 +342,7 @@ contract('KSPool', function (accounts) {
         let tradeInfo = await pool.getTradeInfo();
         // console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
 
-        let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token0, pool);
+        let amountOut = await ksHelper.getAmountOutV2(swapAmount, token0, pool);
 
         let beforeBalanceToken0 = await token0.balanceOf(trader);
         let beforeBalanceToken1 = await token1.balanceOf(trader);
@@ -374,7 +374,7 @@ contract('KSPool', function (accounts) {
 
         let tradeInfo = await pool.getTradeInfo();
         // console.log(`fee = ${tradeInfo._feeInPrecision.toString()}`);
-        let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+        let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
 
         let beforeBalanceToken0 = await token0.balanceOf(trader);
         let beforeBalanceToken1 = await token1.balanceOf(trader);
@@ -404,7 +404,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       const swapAmount = expandTo18Decimals(1);
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
 
       let beforeBalanceToken0 = await token0.balanceOf(trader);
@@ -440,7 +440,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       const swapAmount = expandTo18Decimals(1);
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
 
       let beforeBalanceToken0 = await token0.balanceOf(trader);
@@ -598,7 +598,7 @@ contract('KSPool', function (accounts) {
 
       const swapAmount = expandTo18Decimals(1);
       let tradeInfo = await pool.getTradeInfo();
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -612,7 +612,7 @@ contract('KSPool', function (accounts) {
       let _vToken1Amount = _token1Amount;
       let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
       let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
-      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
+      let fee = ksHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
@@ -626,7 +626,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       tradeInfo = await pool.getTradeInfo();
-      amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -640,7 +640,7 @@ contract('KSPool', function (accounts) {
       const token1Amount = expandTo18Decimals(1000);
       const vToken0Amount = token0Amount.mul(ampBps).div(Helper.BPS);
       const vToken1Amount = token1Amount.mul(ampBps).div(Helper.BPS);
-      const governmentfeeUnits = new BN(10000);
+      const governmentfeeUnits = new BN(10000); // 0.1%
 
       [factory, pool] = await setupPool(admin, token0, token1, ampBps);
       await factory.setFeeConfiguration(feeTo, governmentfeeUnits, {from: accounts[0]});
@@ -652,7 +652,7 @@ contract('KSPool', function (accounts) {
 
       const swapAmount = expandTo18Decimals(1);
       let tradeInfo = await pool.getTradeInfo();
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -666,7 +666,7 @@ contract('KSPool', function (accounts) {
       let _token0Amount = token0Amount.sub(amountOut);
       let collectedFee0 = _vToken0Amount.sub(Helper.sqrt(kLast.mul(_vToken0Amount).div(_vToken1Amount)));
       let poolValueInToken0 = _token0Amount.add(_token1Amount.mul(_vToken0Amount).div(_vToken1Amount));
-      let fee = dmmHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
+      let fee = ksHelper.getFee(totalSuppy, collectedFee0, poolValueInToken0, governmentfeeUnits);
 
       Helper.assertEqual(await pool.totalSupply(), MINIMUM_LIQUIDITY.add(fee));
       Helper.assertEqual(await pool.balanceOf(feeTo), fee);
@@ -680,7 +680,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       tradeInfo = await pool.getTradeInfo();
-      amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -697,7 +697,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       const swapAmount = expandTo18Decimals(1);
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -721,7 +721,7 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       const swapAmount = expandTo18Decimals(1);
-      let amountOut = await dmmHelper.getAmountOutV2(swapAmount, token1, pool);
+      let amountOut = await ksHelper.getAmountOutV2(swapAmount, token1, pool);
       await token1.transfer(pool.address, swapAmount);
       await pool.swap(amountOut, 0, trader, '0x');
 
@@ -741,14 +741,14 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       let tradeInfo = await pool.getTradeInfo();
-      let priceRange = dmmHelper.getPriceRange(tradeInfo);
+      let priceRange = ksHelper.getPriceRange(tradeInfo);
       // console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
 
       await token0.transfer(pool.address, expandTo18Decimals(2));
       await pool.sync();
 
       tradeInfo = await pool.getTradeInfo();
-      priceRange = dmmHelper.getPriceRange(tradeInfo);
+      priceRange = ksHelper.getPriceRange(tradeInfo);
       // console.log(`minRate=${priceRange[0].toString()} maxRate=${priceRange[1].toString()}`);
     });
 
@@ -760,14 +760,14 @@ contract('KSPool', function (accounts) {
       await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
 
       let tradeInfo = await pool.getTradeInfo();
-      let priceRange = dmmHelper.getPriceRange(tradeInfo);
+      let priceRange = ksHelper.getPriceRange(tradeInfo);
 
       await token0.transfer(pool.address, expandTo18Decimals(2));
       await token1.transfer(pool.address, expandTo18Decimals(2));
       await pool.sync();
 
       tradeInfo = await pool.getTradeInfo();
-      let priceRange2 = dmmHelper.getPriceRange(tradeInfo);
+      let priceRange2 = ksHelper.getPriceRange(tradeInfo);
       Helper.assertEqualArray(priceRange, priceRange2); // unchange price range
     });
   });
