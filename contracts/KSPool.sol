@@ -329,9 +329,15 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
         uint256 _vReserve1 = isAmpPool ? data.vReserve1 : data.reserve1; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
-                uint256 collectedFee0 = _vReserve0.sub(
-                    MathExt.sqrt(_kLast.mul(_vReserve0).div(_vReserve1))
-                );
+                uint256 collectedFee0;
+                uint256 _tmp = _kLast * _vReserve0;
+                if (_tmp / _vReserve0 == _kLast) {
+                    collectedFee0 = _vReserve0.sub(MathExt.sqrt(_tmp.div(_vReserve1)));
+                } else {
+                    collectedFee0 = _vReserve0.sub(
+                        MathExt.sqrt(_kLast.div(_vReserve1).mul(_vReserve0))
+                    );
+                }
                 uint256 poolValueInToken0 = data.reserve0.add(
                     data.reserve1.mul(_vReserve0).div(_vReserve1)
                 );
