@@ -492,6 +492,7 @@ contract('KSPool', function (accounts) {
   });
 
   describe('burn', async () => {
+    const dmmHelper = require('./dmmHelper');
     it('burn unamplified pool', async () => {
       [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       const token0Amount = expandTo18Decimals(3);
