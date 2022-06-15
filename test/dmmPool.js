@@ -475,6 +475,7 @@ contract('DMMPool', function (accounts) {
   });
 
   describe('burn', async () => {
+    const dmmHelper = require('./dmmHelper');
     it('burn unamplified pool', async () => {
       [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
       const token0Amount = expandTo18Decimals(3);
@@ -561,6 +562,110 @@ contract('DMMPool', function (accounts) {
         beforeBalances[1].add(token1Amount.sub(new BN(2000))),
       ]);
       console.log(`burn gas used ${result.receipt.gasUsed}`);
+    });
+
+    it('burn imbalanced unamplified pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, unamplifiedBps);
+      const token0Amount = expandTo18Decimals(2);
+      const token1Amount = expandTo18Decimals(2);
+      await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
+
+      const amountOut = expandTo18Decimals(2).sub(new BN(100000));
+      let amountIn = await dmmHelper.getAmountIn(amountOut, token0, pool);
+      await token0.transfer(pool.address, amountIn);
+
+      await pool.swap(new BN(0), amountOut, trader, '0x', {from: app});
+
+      const expectedLiquidity = new BN(1); // burn only 1 liquidity, should get 0 token1
+      let beforeBalancesPool = await getTokenPoolBalances(token0, token1, pool.address);
+      let beforeBalancesUser = await getTokenPoolBalances(token0, token1, liquidityProvider);
+      let beforeTotalSupply = await pool.totalSupply();
+
+      await pool.transfer(pool.address, expectedLiquidity, {from: liquidityProvider});
+      let result = await pool.burn(liquidityProvider, {from: app});
+
+      let amount0Burned = new BN(20030121970902); // precomputed
+      let amount1Burned = new BN(0); // precomputed
+
+      expectEvent(result, 'Transfer', {
+        from: pool.address,
+        to: constants.ZERO_ADDRESS,
+        value: expectedLiquidity,
+      });
+
+      expectEvent(result, 'Burn', {
+        sender: app,
+        amount0: amount0Burned,
+        amount1: amount1Burned,
+      });
+
+      expectEvent(result, 'Sync', {
+        reserve0: beforeBalancesPool[0].sub(amount0Burned),
+        reserve1: beforeBalancesPool[1].sub(amount1Burned),
+      });
+
+      Helper.assertEqual(await pool.totalSupply(), beforeTotalSupply.sub(new BN(1)));
+      // assert balances of user and pool
+      await assertTokenPoolBalances(token0, token1, pool.address, [
+        beforeBalancesPool[0].sub(amount0Burned),
+        beforeBalancesPool[1].sub(amount1Burned),
+      ]);
+      await assertTokenPoolBalances(token0, token1, liquidityProvider, [
+        beforeBalancesUser[0].add(amount0Burned),
+        beforeBalancesUser[1].add(amount1Burned),
+      ]);
+    });
+
+    it('burn imbalanced amp pool', async () => {
+      [factory, pool] = await setupPool(admin, token0, token1, ampBps);
+      const token0Amount = expandTo18Decimals(2);
+      const token1Amount = expandTo18Decimals(2);
+      await addLiquidity(liquidityProvider, pool, token0Amount, token1Amount);
+
+      const amountOut = expandTo18Decimals(2).sub(new BN(100));
+      let amountIn = await dmmHelper.getAmountIn(amountOut, token0, pool);
+      await token0.transfer(pool.address, amountIn);
+
+      await pool.swap(new BN(0), amountOut, trader, '0x', {from: app});
+
+      const expectedLiquidity = new BN(1); // burn only 1 liquidity, should get 0 token1
+      let beforeBalancesPool = await getTokenPoolBalances(token0, token1, pool.address);
+      let beforeBalancesUser = await getTokenPoolBalances(token0, token1, liquidityProvider);
+      let beforeTotalSupply = await pool.totalSupply();
+
+      await pool.transfer(pool.address, expectedLiquidity, {from: liquidityProvider});
+      let result = await pool.burn(liquidityProvider, {from: app});
+
+      let amount0Burned = new BN(3); // precomputed
+      let amount1Burned = new BN(0); // precomputed
+
+      expectEvent(result, 'Transfer', {
+        from: pool.address,
+        to: constants.ZERO_ADDRESS,
+        value: expectedLiquidity,
+      });
+
+      expectEvent(result, 'Burn', {
+        sender: app,
+        amount0: amount0Burned,
+        amount1: amount1Burned,
+      });
+
+      expectEvent(result, 'Sync', {
+        reserve0: beforeBalancesPool[0].sub(amount0Burned),
+        reserve1: beforeBalancesPool[1].sub(amount1Burned),
+      });
+
+      Helper.assertEqual(await pool.totalSupply(), beforeTotalSupply.sub(new BN(1)));
+      // assert balances of user and pool
+      await assertTokenPoolBalances(token0, token1, pool.address, [
+        beforeBalancesPool[0].sub(amount0Burned),
+        beforeBalancesPool[1].sub(amount1Burned),
+      ]);
+      await assertTokenPoolBalances(token0, token1, liquidityProvider, [
+        beforeBalancesUser[0].add(amount0Burned),
+        beforeBalancesUser[1].add(amount1Burned),
+      ]);
     });
   });
 
