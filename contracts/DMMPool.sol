@@ -137,7 +137,7 @@ contract DMMPool is IDMMPool, ERC20Permit, ReentrancyGuard, VolumeTrendRecorder 
         uint256 _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, "DMM: INSUFFICIENT_LIQUIDITY_BURNED");
+        require(amount0 > 0 || amount1 > 0, "DMM: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
         _token0.safeTransfer(to, amount0);
         _token1.safeTransfer(to, amount1);
