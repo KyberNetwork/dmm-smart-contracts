@@ -145,8 +145,8 @@ contract KSPool is IKSPool, ERC20Permit, ReentrancyGuard {
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 || amount1 > 0, "KS: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
-        _token0.safeTransfer(to, amount0);
-        _token1.safeTransfer(to, amount1);
+        if (amount0 > 0) _token0.safeTransfer(to, amount0);
+        if (amount1 > 0) _token1.safeTransfer(to, amount1);
         ReserveData memory _data;
         _data.reserve0 = _token0.balanceOf(address(this));
         _data.reserve1 = _token1.balanceOf(address(this));
