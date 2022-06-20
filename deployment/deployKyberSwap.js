@@ -12,6 +12,7 @@ async function main() {
   const factory = await KSFactory.new(accounts[0]);
   console.log('Factory V2 deployed to:', factory.address);
 
+
   await runVerifyAndSleep({
     address: factory.address,
     constructorArguments: [accounts[0]],

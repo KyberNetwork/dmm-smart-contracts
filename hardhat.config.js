@@ -186,6 +186,7 @@ if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
     url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
+
   };
 }
 
@@ -201,6 +202,7 @@ if (MATIC_VIGIL_KEY != undefined && PRIVATE_KEY != undefined) {
     timeout: 20000,
   };
 }
+
 
 module.exports.networks.bsctestnet = {
   url: `https://data-seed-prebsc-1-s2.binance.org:8545/`,
