@@ -14,7 +14,7 @@ import "../interfaces/IWETH.sol";
 import "../interfaces/IERC20Permit.sol";
 
 /// @dev detail here: https://hackmd.io/vdqxJx8STNqPm0LG8vGWaw
-contract ZapInV2 {
+contract KSZapIn {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
