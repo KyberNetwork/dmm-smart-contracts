@@ -29,7 +29,6 @@ contract KSZapIn {
     uint256 private constant PRECISION = 1e18;
     uint256 internal constant Q112 = 2**112;
 
-    IKSFactory public immutable factory;
     address public immutable weth;
 
     modifier ensure(uint256 deadline) {
@@ -37,8 +36,7 @@ contract KSZapIn {
         _;
     }
 
-    constructor(IKSFactory _factory, address _weth) public {
-        factory = _factory;
+    constructor(address _weth) public {
         weth = _weth;
     }
 
@@ -47,11 +45,13 @@ contract KSZapIn {
     }
 
     /// @dev swap eth to token and then add liquidity to a pool with token-weth
+    /// @param factory address of the Factory contract
     /// @param tokenOut another token of the pool - not weth
     /// @param pool address of the pool
     /// @param minLpQty min of lp token after swap
     /// @param deadline the last time the transaction can be executed
     function zapInEth(
+        IKSFactory factory,
         IERC20 tokenOut,
         address pool,
         address to,
@@ -60,6 +60,7 @@ contract KSZapIn {
     ) external payable ensure(deadline) returns (uint256 lpQty) {
         IWETH(weth).deposit{value: msg.value}();
         (uint256 amountSwap, uint256 amountOutput) = calculateSwapAmounts(
+            factory,
             IERC20(weth),
             tokenOut,
             pool,
@@ -83,6 +84,7 @@ contract KSZapIn {
     /// @param minLpQty min of lp token after swap
     /// @param deadline the last time the transaction can be executed
     function zapIn(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         uint256 userIn,
@@ -92,6 +94,7 @@ contract KSZapIn {
         uint256 deadline
     ) external ensure(deadline) returns (uint256 lpQty) {
         (uint256 amountSwap, uint256 amountOutput) = calculateSwapAmounts(
+            factory,
             tokenIn,
             tokenOut,
             pool,
@@ -108,6 +111,7 @@ contract KSZapIn {
     }
 
     function zapOut(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         uint256 liquidity,
@@ -116,11 +120,12 @@ contract KSZapIn {
         uint256 minTokenOut,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 amountOut) {
-        amountOut = _zapOut(tokenIn, tokenOut, liquidity, pool, minTokenOut);
+        amountOut = _zapOut(factory, tokenIn, tokenOut, liquidity, pool, minTokenOut);
         tokenOut.safeTransfer(to, amountOut);
     }
 
     function zapOutPermit(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         uint256 liquidity,
@@ -135,11 +140,12 @@ contract KSZapIn {
     ) external ensure(deadline) returns (uint256 amountOut) {
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
-        amountOut = _zapOut(tokenIn, tokenOut, liquidity, pool, minTokenOut);
+        amountOut = _zapOut(factory, tokenIn, tokenOut, liquidity, pool, minTokenOut);
         tokenOut.safeTransfer(to, amountOut);
     }
 
     function zapOutEth(
+        IKSFactory factory,
         IERC20 tokenIn,
         uint256 liquidity,
         address pool,
@@ -147,12 +153,13 @@ contract KSZapIn {
         uint256 minTokenOut,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 amountOut) {
-        amountOut = _zapOut(tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
+        amountOut = _zapOut(factory, tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
 
     function zapOutEthPermit(
+        IKSFactory factory,
         IERC20 tokenIn,
         uint256 liquidity,
         address pool,
@@ -166,23 +173,25 @@ contract KSZapIn {
     ) external returns (uint256 amountOut) {
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
-        amountOut = _zapOut(tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
+        amountOut = _zapOut(factory, tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
 
     function calculateZapInAmounts(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         address pool,
         uint256 userIn
     ) external view returns (uint256 tokenInAmount, uint256 tokenOutAmount) {
         uint256 amountSwap;
-        (amountSwap, tokenOutAmount) = calculateSwapAmounts(tokenIn, tokenOut, pool, userIn);
+        (amountSwap, tokenOutAmount) = calculateSwapAmounts(factory, tokenIn, tokenOut, pool, userIn);
         tokenInAmount = userIn.sub(amountSwap);
     }
 
     function calculateZapOutAmount(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         address pool,
@@ -190,6 +199,7 @@ contract KSZapIn {
     ) external view returns (uint256) {
         require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
         (uint256 amountIn, uint256 amountOut, ReserveData memory data) = _calculateBurnAmount(
+            factory,
             pool,
             tokenIn,
             tokenOut,
@@ -207,6 +217,7 @@ contract KSZapIn {
     }
 
     function calculateSwapAmounts(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         address pool,
@@ -234,6 +245,7 @@ contract KSZapIn {
     }
 
     function _zapOut(
+        IKSFactory factory,
         IERC20 tokenIn,
         IERC20 tokenOut,
         uint256 liquidity,
@@ -266,6 +278,7 @@ contract KSZapIn {
     }
 
     function _calculateBurnAmount(
+        IKSFactory factory,
         address pool,
         IERC20 tokenIn,
         IERC20 tokenOut,
@@ -285,7 +298,7 @@ contract KSZapIn {
             tokenIn,
             tokenOut
         );
-        uint256 totalSupply = _calculateSyncTotalSupply(IKSPool(pool), data);
+        uint256 totalSupply = _calculateSyncTotalSupply(factory, IKSPool(pool), data);
         bool isAmpPool = (IKSPool(pool).ampBps() != 10000);
         // calculate amountOut
         amountIn = lpQty.mul(data.rIn) / totalSupply;
@@ -307,7 +320,7 @@ contract KSZapIn {
         newData.feeInPrecision = data.feeInPrecision;
     }
 
-    function _calculateSyncTotalSupply(IKSPool pool, ReserveData memory data)
+    function _calculateSyncTotalSupply(IKSFactory factory, IKSPool pool, ReserveData memory data)
         internal
         view
         returns (uint256 totalSupply)
