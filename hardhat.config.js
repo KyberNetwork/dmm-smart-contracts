@@ -239,9 +239,41 @@ module.exports.networks.arbitrum = {
 };
 
 if (process.env.ETHERSCAN_API_KEY != undefined) {
+  // hardhat-etherscan supports custom chains verification
+  // for more details, visit: https://hardhat.org/plugins/nomiclabs-hardhat-etherscan
   module.exports.etherscan = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
+    apiKey: {
+      mainnet: `${process.env.ETHERSCAN_API_KEY}`,
+      ropsten: `${process.env.ETHERSCAN_API_KEY}`,
+      rinkeby: `${process.env.ETHERSCAN_API_KEY}`,
+      goerli: `${process.env.ETHERSCAN_API_KEY}`,
+      kovan: `${process.env.ETHERSCAN_API_KEY}`,
+    },
   };
 }
+
+// just add another API KEY for each explorer
+if (process.env.BSCSCAN_API_KEY != undefined) {
+  module.exports.etherscan = {
+    // for more details, visit: https://hardhat.org/plugins/nomiclabs-hardhat-etherscan
+    apiKey: {
+      bsc: `${process.env.BSCSCAN_API_KEY}`,
+      bscTestnet: `${process.env.BSCSCAN_API_KEY}`,
+    },
+  };
+}
+// configs for custom chain
+module.exports.etherscan = {
+  customChains: [
+    {
+      network: 'rinkeby2',
+      chainId: 4,
+      urls: {
+        apiURL: 'https://api-rinkeby.etherscan.io/api',
+        browserURL: 'https://rinkeby.etherscan.io',
+      },
+    },
+  ],
+};
