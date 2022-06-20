@@ -320,11 +320,20 @@ contract ZapInV2 {
         uint256 _kLast = pool.kLast();
         if (_kLast == 0) return totalSupply;
 
-        uint256 rootKLast = MathExt.sqrt(_kLast);
-        uint256 rootK = MathExt.sqrt(data.vIn * data.vOut);
-
-        uint256 numerator = totalSupply.mul(rootK.sub(rootKLast)).mul(governmentFeeUnits);
-        uint256 denominator = rootK.add(rootKLast).mul(5000);
+        uint256 collectedFee0;
+        uint256 _tmp = _kLast * data.vIn;
+        if (_tmp / data.vIn == _kLast) {
+            collectedFee0 = data.vIn.sub(MathExt.sqrt(_tmp.div(data.vOut)));
+        } else {
+            collectedFee0 = data.vIn.sub(
+                MathExt.sqrt(_kLast.div(data.vOut).mul(data.vIn))
+            );
+        }
+        uint256 poolValueInToken0 = data.rIn.add(
+            data.rOut.mul(data.vIn).div(data.vOut)
+        );
+        uint256 numerator = totalSupply.mul(collectedFee0).mul(governmentFeeUnits);
+        uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(50000);
         uint256 liquidity = numerator / denominator;
 
         totalSupply += liquidity;
