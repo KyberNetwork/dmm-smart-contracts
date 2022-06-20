@@ -1,3 +1,5 @@
+const {runVerifyAndSleep} = require('./helper');
+
 const KSFactory = artifacts.require('KSFactory');
 const KSRouter02 = artifacts.require('KSRouter02');
 const BN = web3.utils.BN;
@@ -12,8 +14,17 @@ async function main() {
   const factory = await KSFactory.new(accounts[0]);
   console.log('Factory V2 deployed to:', factory.address);
 
+  await runVerifyAndSleep({
+    address: factory.address,
+    constructorArguments: [accounts[0]],
+  });
+
   const router = await KSRouter02.new(factory.address, wethAddress);
   console.log('Router deployed to:', router.address);
+  await runVerifyAndSleep({
+    address: router.address,
+    constructorArguments: [factory.address, wethAddress],
+  });
 }
 
 main()

@@ -3,6 +3,7 @@ const {artifacts} = require('hardhat');
 const BN = web3.utils.BN;
 
 const Helper = require('../test/helper');
+const {runVerifyAndSleep} = require('./helper');
 
 const LiquidityMigrator = artifacts.require('LiquidityMigrator.sol');
 const IDMMRouter02 = artifacts.require('IDMMRouter02.sol');
@@ -34,7 +35,7 @@ let tokenWithFee;
 
 let deployer;
 
-async function main () {
+async function main() {
   const accounts = await web3.eth.getAccounts();
   // We get the contract to deploy
 
@@ -54,6 +55,10 @@ async function main () {
 
   if (migratorAddress == undefined) {
     migrator = await LiquidityMigrator.new(dmmRouterAddress, {gasPrice: gasPrice});
+    await runVerifyAndSleep({
+      address: migrator.address,
+      constructorArguments: [dmmRouterAddress],
+    });
     migratorAddress = migrator.address;
   } else {
     migrator = await LiquidityMigrator.at(migratorAddress);
@@ -63,6 +68,10 @@ async function main () {
   if (testTokenAddress == undefined) {
     // name/symbol/total_supply
     testToken = await TestToken.new('Test token', 'TST', new BN(10).pow(new BN(32)), {gasPrice: gasPrice});
+    await runVerifyAndSleep({
+      address: testToken.address,
+      constructorArguments: ['Test token', 'TST', new BN(10).pow(new BN(32)).toString()],
+    });
     testTokenAddress = testToken.address;
   } else {
     testToken = await TestToken.at(testTokenAddress);
@@ -77,7 +86,11 @@ async function main () {
 
   if (tokenWithFeeAddress == undefined) {
     tokenWithFee = await MockFeeOnTransferERC20.new('Test Fee Token', 'FTST', new BN(10).pow(new BN(32)), {
-      gasPrice: gasPrice
+      gasPrice: gasPrice,
+    });
+    await runVerifyAndSleep({
+      address: tokenWithFee.address,
+      constructorArguments: ['Test Fee Token', 'FTST', new BN(10).pow(new BN(32)).toString()],
     });
     tokenWithFeeAddress = tokenWithFee.address;
   } else {
@@ -91,7 +104,7 @@ async function main () {
 
   await uniswapRouter.addLiquidityETH(testTokenAddress, tokenAmount, 0, 0, deployer, deadline, {
     value: ethAmount,
-    gasPrice: gasPrice
+    gasPrice: gasPrice,
   });
   console.log(`Added liquidity ETH - token`);
 
@@ -135,7 +148,7 @@ async function main () {
   await uniswapRouter.swapExactETHForTokens(0, [wethAddress, testToken.address], deployer, deadline, {
     value: ethAmount.div(new BN(10)),
     gasPrice: gasPrice,
-    gas: 200000
+    gas: 200000,
   });
   let pools = await dmmFactory.getPools(wethAddress, testToken.address);
   console.log(`Kyber DMM pool for token: ${pools[0]}`);
@@ -206,7 +219,7 @@ async function main () {
 
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch((error) => {
     console.error(error);
     process.exit(1);
   });

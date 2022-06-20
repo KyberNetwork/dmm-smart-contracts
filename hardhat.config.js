@@ -242,6 +242,22 @@ if (process.env.ETHERSCAN_API_KEY != undefined) {
   module.exports.etherscan = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
+    apiKey: {
+      mainnet: `${process.env.ETHERSCAN_API_KEY}`,
+      rinkeby: `${process.env.ETHERSCAN_API_KEY}`,
+      ropsten: `${process.env.ETHERSCAN_API_KEY}`,
+    },
+  };
+}
+
+if (process.env.BSCSCAN_API_KEY != undefined) {
+  module.exports.etherscan = {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: {
+      ...module.exports.etherscan.apiKey,
+      bsc: `${process.env.BSCSCAN_API_KEY}`,
+      bscTestnet: `${process.env.BSCSCAN_API_KEY}`,
+    },
   };
 }
