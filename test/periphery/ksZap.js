@@ -202,52 +202,7 @@ contract('KSZap', (accounts) => {
         );
       });
 
-      it('#calculateZapOutAmount', async () => {
-        const tokenA = await TestToken.new('tstA', 'B', Helper.expandTo18Decimals(10000));
-        const tokenB = await TestToken.new('tstB', 'B', Helper.expandTo18Decimals(10000));
-
-        // set up new pool with 100 tokenA and 100 tokenB
-        await tokenA.approve(router.address, MaxUint256);
-        await tokenB.approve(router.address, MaxUint256);
-
-        await router.addLiquidityNewPool(
-          tokenA.address,
-          tokenB.address,
-          [new BN(ampBps), new BN(10)],
-          Helper.precisionUnits.mul(new BN(100)),
-          Helper.precisionUnits.mul(new BN(100)),
-          new BN(0),
-          new BN(0),
-          accounts[0],
-          MaxUint256
-        );
-        poolAddress = (await factory.getPools(tokenA.address, tokenB.address))[0];
-        liquidity = Helper.expandTo18Decimals(3);
-
-        let zapOutAmountToken0 = await ksZap.calculateZapOutAmount(
-          factory.address,
-          tokenA.address,
-          tokenB.address,
-          poolAddress,
-          liquidity
-        );
-
-        let zapOutAmountToken1 = await ksZap.calculateZapOutAmount(
-          factory.address,
-          tokenB.address,
-          tokenA.address,
-          poolAddress,
-          liquidity
-        );
-
-        Helper.assertEqual(
-          zapOutAmountToken0,
-          zapOutAmountToken1,
-          'unexpected zapOut amount between tokenIn is token0 or token1'
-        );
-      });
-
-      it('#zapOut', async () => {
+      it('#zapOut#1', async () => {
         let userIn = Helper.expandTo18Decimals(3);
         await ksZap.zapInEth(factory.address, token.address, pool.address, accounts[1], 1, MaxUint256, {
           from: accounts[1],
@@ -272,6 +227,44 @@ contract('KSZap', (accounts) => {
           gasPrice: new BN(0),
         });
         let afterBalance = await Helper.getBalancePromise(accounts[1]);
+        Helper.assertEqual(afterBalance.sub(beforeBalance), zapOutAmount, 'unexpected zapOut amout');
+      });
+
+      it('#zapOut#2', async () => {
+        let userIn = Helper.expandTo18Decimals(3);
+        await ksZap.zapInEth(factory.address, token.address, pool.address, accounts[1], 1, MaxUint256, {
+          from: accounts[1],
+          value: userIn,
+        });
+
+        await pool.approve(ksZap.address, MaxUint256, {from: accounts[1]});
+
+        let liquidity = await pool.balanceOf(accounts[1]);
+
+        let zapOutAmount = await ksZap.calculateZapOutAmount(
+          factory.address,
+          weth.address,
+          token.address,
+          pool.address,
+          liquidity
+        );
+
+        let beforeBalance = await token.balanceOf(accounts[1]);
+        await ksZap.zapOut(
+          factory.address,
+          weth.address,
+          token.address,
+          liquidity,
+          pool.address,
+          accounts[1],
+          1,
+          MaxUint256,
+          {
+            from: accounts[1],
+            gasPrice: new BN(0),
+          }
+        );
+        let afterBalance = await token.balanceOf(accounts[1]);
         Helper.assertEqual(afterBalance.sub(beforeBalance), zapOutAmount, 'unexpected zapOut amout');
       });
 
