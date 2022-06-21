@@ -42,7 +42,7 @@ let migrator;
 let token0s;
 let token1s;
 
-contract('LiquidityMigrator', accounts => {
+contract('LiquidityMigrator', (accounts) => {
   before('set accounts', async () => {
     feeSetter = accounts[0];
     liquidityProvider = accounts[3];
@@ -54,7 +54,7 @@ contract('LiquidityMigrator', accounts => {
 
   before('setup dmmFactory and dmmRouter', async () => {
     feeToken = await FeeToken.new('feeOnTransfer Token', 'FOT', expandTo18Decimals(1000000), {
-      from: liquidityProvider
+      from: liquidityProvider,
     });
     normalToken = await TestToken.new('test', 't1', expandTo18Decimals(1000000), {from: liquidityProvider});
 
@@ -100,19 +100,19 @@ contract('LiquidityMigrator', accounts => {
     token1s = [normalToken, weth, feeToken];
   });
 
-  async function approveAllowance (tokens, spender, amount, user) {
+  async function approveAllowance(tokens, spender, amount, user) {
     for (let i = 0; i < tokens.length; i++) {
       await tokens[i].approve(spender, amount, {from: user});
     }
   }
 
-  async function addLiquidity (tokenA, tokenB, amountA, amountB, liquidityProvider) {
+  async function addLiquidity(tokenA, tokenB, amountA, amountB, liquidityProvider) {
     await uniswapRouter.addLiquidity(tokenA, tokenB, amountA, amountB, 0, 0, liquidityProvider, deadline, {
-      from: liquidityProvider
+      from: liquidityProvider,
     });
   }
 
-  async function verifyMigrateEventAndData (
+  async function verifyMigrateEventAndData(
     tx,
     tokenA,
     tokenB,
@@ -128,11 +128,11 @@ contract('LiquidityMigrator', accounts => {
       tokenA: tokenA,
       tokenB: tokenB,
       uniPair: await uniswapFactory.getPair(tokenA, tokenB),
-      liquidity: liquidity
+      liquidity: liquidity,
     });
     expectEvent(tx, 'Migrated', {
       tokenA: tokenA,
-      tokenB: tokenB
+      tokenB: tokenB,
     });
     if (poolAddress == zeroAddress) {
       // verify new pool has been created
@@ -146,7 +146,7 @@ contract('LiquidityMigrator', accounts => {
     Helper.assertEqual(lpBalance.sub(liquidity), await lpToken.balanceOf(provider));
   }
 
-  async function getSharesFromPool (poolAddress, tokenA, tokenB, user) {
+  async function getSharesFromPool(poolAddress, tokenA, tokenB, user) {
     let token = await TestToken.at(poolAddress);
     let totalSupply = await token.totalSupply();
     let userBalance = await token.balanceOf(user);
@@ -428,7 +428,7 @@ contract('LiquidityMigrator', accounts => {
     });
   }
 
-  async function getPermitData (lpToken, liquidity, isApproveMax, deadline) {
+  async function getPermitData(lpToken, liquidity, isApproveMax, deadline) {
     let permitToken = await UniswapV2Pair.at(lpToken.address);
     const nonce = await permitToken.nonces(liquidityProvider);
     const digest = await getApprovalDigest(
@@ -776,7 +776,7 @@ contract('LiquidityMigrator', accounts => {
   });
 });
 
-async function getApprovalDigest (token, owner, spender, value, nonce, deadline) {
+async function getApprovalDigest(token, owner, spender, value, nonce, deadline) {
   const domainSeparator = await token.DOMAIN_SEPARATOR();
 
   const PERMIT_TYPEHASH = '0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9';
@@ -791,7 +791,7 @@ async function getApprovalDigest (token, owner, spender, value, nonce, deadline)
       Buffer.concat([
         Buffer.from('1901', 'hex'),
         Buffer.from(domainSeparator.slice(2), 'hex'),
-        Buffer.from(tmp.slice(2), 'hex')
+        Buffer.from(tmp.slice(2), 'hex'),
       ]).toString('hex')
   );
 }

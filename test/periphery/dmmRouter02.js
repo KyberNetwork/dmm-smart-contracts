@@ -24,7 +24,7 @@ let tokenPool;
 let feeSetter;
 let liquidityProvider;
 
-contract('DMMRouter02', accounts => {
+contract('DMMRouter02', (accounts) => {
   before('set accounts', async () => {
     feeSetter = accounts[0];
     liquidityProvider = accounts[3];
@@ -50,7 +50,7 @@ contract('DMMRouter02', accounts => {
     Helper.assertEqual(await Helper.getBalancePromise(router.address), new BN(0));
   });
 
-  async function addLiquidity (feeTokenAmount, ethAmount, liquidityProvider) {
+  async function addLiquidity(feeTokenAmount, ethAmount, liquidityProvider) {
     await feeToken.approve(router.address, MaxUint256);
     await router.addLiquidityETH(
       feeToken.address,
@@ -62,7 +62,7 @@ contract('DMMRouter02', accounts => {
       liquidityProvider,
       MaxUint256,
       {
-        value: ethAmount
+        value: ethAmount,
       }
     );
   }
@@ -88,16 +88,14 @@ contract('DMMRouter02', accounts => {
       liquidityProvider,
       MaxUint256,
       {
-        from: liquidityProvider
+        from: liquidityProvider,
       }
     );
   });
 
   // ETH -> DTT
   it('swapExactETHForTokensSupportingFeeOnTransferTokens', async () => {
-    const feeTokenAmount = expandTo18Decimals(10)
-      .mul(new BN(100))
-      .div(new BN(99));
+    const feeTokenAmount = expandTo18Decimals(10).mul(new BN(100)).div(new BN(99));
     const ethAmount = expandTo18Decimals(5);
     const swapAmount = expandTo18Decimals(1);
     const poolsPath = [pool.address];
@@ -113,7 +111,7 @@ contract('DMMRouter02', accounts => {
         MaxUint256,
         {
           from: trader,
-          value: swapAmount
+          value: swapAmount,
         }
       ),
       'DMMRouter: INVALID_PATH'
@@ -129,22 +127,20 @@ contract('DMMRouter02', accounts => {
         MaxUint256,
         {
           from: trader,
-          value: swapAmount
+          value: swapAmount,
         }
       ),
       'DMMRouter: INSUFFICIENT_OUTPUT_AMOUNT'
     );
     await router.swapExactETHForTokensSupportingFeeOnTransferTokens(0, poolsPath, path, trader, MaxUint256, {
       from: trader,
-      value: swapAmount
+      value: swapAmount,
     });
   });
 
   // DTT -> ETH
   it('swapExactTokensForETHSupportingFeeOnTransferTokens', async () => {
-    const feeTokenAmount = expandTo18Decimals(5)
-      .mul(new BN(100))
-      .div(new BN(99));
+    const feeTokenAmount = expandTo18Decimals(5).mul(new BN(100)).div(new BN(99));
     const path = [feeToken.address, weth.address];
     const poolsPath = [pool.address];
     const ethAmount = expandTo18Decimals(10);
@@ -162,7 +158,7 @@ contract('DMMRouter02', accounts => {
         trader,
         MaxUint256,
         {
-          from: trader
+          from: trader,
         }
       ),
       'DMMRouter: INVALID_PATH'
@@ -177,7 +173,7 @@ contract('DMMRouter02', accounts => {
         trader,
         MaxUint256,
         {
-          from: trader
+          from: trader,
         }
       ),
       'DMMRouter: INSUFFICIENT_OUTPUT_AMOUNT'
@@ -190,7 +186,7 @@ contract('DMMRouter02', accounts => {
       trader,
       MaxUint256,
       {
-        from: trader
+        from: trader,
       }
     );
   });
@@ -203,9 +199,7 @@ contract('DMMRouter02', accounts => {
     const poolAddresses = await factory.getPools(feeToken.address, feeToken2.address);
     tokenPool = await DMMPool.at(poolAddresses[poolAddresses.length - 1]);
 
-    const feeTokenAmount = expandTo18Decimals(5)
-      .mul(new BN(100))
-      .div(new BN(99));
+    const feeTokenAmount = expandTo18Decimals(5).mul(new BN(100)).div(new BN(99));
     const feeTokenAmount2 = expandTo18Decimals(5);
     const amountIn = expandTo18Decimals(1);
 

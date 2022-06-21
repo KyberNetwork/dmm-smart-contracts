@@ -13,7 +13,7 @@ const DMMFactory = artifacts.require('DMMFactory');
 const WETH = artifacts.require('WETH9');
 const TestToken = artifacts.require('TestToken');
 
-contract('ZapIn', accounts => {
+contract('ZapIn', (accounts) => {
   let token;
   let weth;
   let zapIn;
@@ -21,7 +21,7 @@ contract('ZapIn', accounts => {
   let token0Addr;
 
   let ampBpsArr = [10000, 15000];
-  ampBpsArr.forEach(ampBps => {
+  ampBpsArr.forEach((ampBps) => {
     describe(`ampBps = ${ampBps}`, async () => {
       beforeEach('basic setup', async () => {
         token = await TestToken.new('tst', 'A', Helper.expandTo18Decimals(10000));
@@ -42,7 +42,7 @@ contract('ZapIn', accounts => {
           accounts[0],
           MaxUint256,
           {
-            value: Helper.expandTo18Decimals(30)
+            value: Helper.expandTo18Decimals(30),
           }
         );
         poolAddress = (await factory.getPools(token.address, weth.address))[0];
@@ -67,14 +67,14 @@ contract('ZapIn', accounts => {
 
         let swapAmounts = await zapIn.calculateSwapAmounts(token.address, weth.address, pool.address, userIn);
         let result = await zapIn.zapIn(token.address, weth.address, userIn, pool.address, accounts[1], 1, MaxUint256, {
-          from: accounts[1]
+          from: accounts[1],
         });
 
         expectEvent.inTransaction(result.tx, pool, 'Swap', {
           amount0In: token0Addr === token.address ? swapAmounts[0] : new BN(0),
           amount1In: token0Addr === token.address ? new BN(0) : swapAmounts[0],
           amount0Out: token0Addr === token.address ? new BN(0) : swapAmounts[1],
-          amount1Out: token0Addr === token.address ? swapAmounts[1] : new BN(0)
+          amount1Out: token0Addr === token.address ? swapAmounts[1] : new BN(0),
         });
       });
 
@@ -82,7 +82,7 @@ contract('ZapIn', accounts => {
         let userIn = Helper.expandTo18Decimals(3);
         await zapIn.zapInEth(token.address, pool.address, accounts[1], 1, MaxUint256, {
           from: accounts[1],
-          value: userIn
+          value: userIn,
         });
         Helper.assertGreater(await pool.balanceOf(accounts[1]), new BN(0));
       });
@@ -91,7 +91,7 @@ contract('ZapIn', accounts => {
         let userIn = Helper.expandTo18Decimals(3);
         await zapIn.zapInEth(token.address, pool.address, accounts[1], 1, MaxUint256, {
           from: accounts[1],
-          value: userIn
+          value: userIn,
         });
 
         await pool.approve(zapIn.address, MaxUint256, {from: accounts[1]});
@@ -103,7 +103,7 @@ contract('ZapIn', accounts => {
         let beforeBalance = await Helper.getBalancePromise(accounts[1]);
         await zapIn.zapOutEth(token.address, liquidity, pool.address, accounts[1], 1, MaxUint256, {
           from: accounts[1],
-          gasPrice: new BN(0)
+          gasPrice: new BN(0),
         });
         let afterBalance = await Helper.getBalancePromise(accounts[1]);
         Helper.assertEqual(afterBalance.sub(beforeBalance), zapOutAmount, 'unexpected zapOut amout');
@@ -117,7 +117,7 @@ contract('ZapIn', accounts => {
         let userIn = Helper.expandTo18Decimals(3);
         await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {
           from: liquidityProvider,
-          value: userIn
+          value: userIn,
         });
 
         const liquidity = await pool.balanceOf(liquidityProvider);
@@ -149,7 +149,7 @@ contract('ZapIn', accounts => {
           r,
           s,
           {
-            from: liquidityProvider
+            from: liquidityProvider,
           }
         );
       });
@@ -162,7 +162,7 @@ contract('ZapIn', accounts => {
         let userIn = Helper.expandTo18Decimals(3);
         await zapIn.zapInEth(token.address, pool.address, liquidityProvider, 1, MaxUint256, {
           from: liquidityProvider,
-          value: userIn
+          value: userIn,
         });
 
         const liquidity = await pool.balanceOf(liquidityProvider);
@@ -193,7 +193,7 @@ contract('ZapIn', accounts => {
           r,
           s,
           {
-            from: liquidityProvider
+            from: liquidityProvider,
           }
         );
       });

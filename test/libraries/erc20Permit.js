@@ -10,7 +10,7 @@ let spender;
 let owner;
 let ownerPkKey;
 
-contract('ERC20Permit', accounts => {
+contract('ERC20Permit', (accounts) => {
   before('init account', async () => {
     spender = accounts[2];
     owner = accounts[3];

@@ -19,7 +19,10 @@ interface IKSFactory {
 
     function setFeeToSetter(address) external;
 
-    function getFeeConfiguration() external view returns (address feeTo, uint24 governmentFeeUnits);
+    function getFeeConfiguration()
+        external
+        view
+        returns (address feeTo, uint24 governmentFeeUnits);
 
     function feeToSetter() external view returns (address);
 

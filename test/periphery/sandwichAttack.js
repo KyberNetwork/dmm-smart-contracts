@@ -12,7 +12,7 @@ const DMMPool = artifacts.require('DMMPool');
 const WETH = artifacts.require('WETH9');
 const TestToken = artifacts.require('TestToken');
 
-contract('test', async accounts => {
+contract('test', async (accounts) => {
   it.skip('sandwich attacks', async () => {
     const deployer = accounts[0];
     const attacker = accounts[1];
@@ -106,16 +106,8 @@ contract('test', async accounts => {
         token0Amount.div(new BN(100)).mul(new BN(99)),
         token1Amount.div(new BN(100)).mul(new BN(99)),
         [
-          token1Amount
-            .mul(Helper.Q112)
-            .mul(new BN(99))
-            .div(new BN(100))
-            .div(token0Amount),
-          token1Amount
-            .mul(Helper.Q112)
-            .mul(new BN(100))
-            .div(new BN(99))
-            .div(token0Amount)
+          token1Amount.mul(Helper.Q112).mul(new BN(99)).div(new BN(100)).div(token0Amount),
+          token1Amount.mul(Helper.Q112).mul(new BN(100)).div(new BN(99)).div(token0Amount),
         ],
         victim,
         Helper.MaxUint256,
@@ -157,11 +149,11 @@ contract('test', async accounts => {
     */
   });
 
-  function convertWeiToFloat (a) {
+  function convertWeiToFloat(a) {
     return a.div(new BN(10).pow(new BN(16))).toNumber() / 100;
   }
 
-  async function printBalance (name, user, token0, token1) {
+  async function printBalance(name, user, token0, token1) {
     const b0 = await token0.balanceOf(user);
     const b1 = await token1.balanceOf(user);
     console.log(`[+] Balance of ${name}:`);
@@ -173,7 +165,7 @@ contract('test', async accounts => {
     return value;
   }
 
-  async function computeBalanceReserve (pool) {
+  async function computeBalanceReserve(pool) {
     let tradeInfo = await pool.getTradeInfo();
     prod = tradeInfo[2].mul(tradeInfo[3]);
 
@@ -182,7 +174,7 @@ contract('test', async accounts => {
     return {newVR0, newVR1, oldVR0: tradeInfo[2], oldVR1: tradeInfo[3]};
   }
 
-  async function printPoolInfo (name, pool, token0, token1) {
+  async function printPoolInfo(name, pool, token0, token1) {
     let poolValue = await printBalance(name, pool.address, token0, token1);
 
     console.log(`[+] Value of 1 LP Share: ${poolValue / convertWeiToFloat(await pool.totalSupply())} USD`);

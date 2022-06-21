@@ -42,7 +42,7 @@ function exportData({filename, data}) {
       filename = `${filename}-${hre.network.name}`;
     }
     let json = JSON.stringify(data, null, 2);
-    fs.writeFileSync(path.join(__dirname, filename), json);
+    fs.writeFileSync(path.join(__dirname, `${filename}.json`), json);
   } catch (error) {
     console.log(`exportData failed : ${error.message}`);
   }

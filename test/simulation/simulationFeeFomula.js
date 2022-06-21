@@ -6,7 +6,7 @@ const Helper = require('../helper');
 
 const fs = require('fs');
 
-contract('FeeFomula', accounts => {
+contract('FeeFomula', (accounts) => {
   // this is a long run test so disable it when running test
   it.skip('simulate fee fomula', async () => {
     let feeFomula = await FeeFomula.new();

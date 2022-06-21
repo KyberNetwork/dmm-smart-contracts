@@ -12,7 +12,7 @@ let token0;
 let token1;
 let owner;
 
-contract('DaoRegistry', accounts => {
+contract('DaoRegistry', (accounts) => {
   before('init', async () => {
     owner = accounts[1];
 
@@ -46,7 +46,7 @@ contract('DaoRegistry', accounts => {
       token0: token0.address,
       token1: token1.address,
       pool: pools[0],
-      isAdd: true
+      isAdd: true,
     });
 
     let registeredPools = await registry.getPools(token0.address, token1.address);
