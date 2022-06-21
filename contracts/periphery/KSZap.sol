@@ -54,7 +54,7 @@ contract KSZap {
 
     constructor(IKSFactory _factory, address _weth) public {
         configMaster = msg.sender;
-        emit ConfigMasterUpdated(address(0), configMaster);
+        emit ConfigMasterUpdated(address(0), msg.sender);
 
         whitelistedFactories[_factory] = true;
         emit FactoryAdded(_factory);
