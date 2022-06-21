@@ -3,7 +3,7 @@ const {artifacts} = require('hardhat');
 const BN = web3.utils.BN;
 
 const Helper = require('../test/helper');
-const {runVerifyAndSleep} = require('./helper');
+const {runVerifyAndExport} = require('./helper');
 
 const LiquidityMigrator = artifacts.require('LiquidityMigrator.sol');
 const IDMMRouter02 = artifacts.require('IDMMRouter02.sol');
@@ -55,9 +55,10 @@ async function main() {
 
   if (migratorAddress == undefined) {
     migrator = await LiquidityMigrator.new(dmmRouterAddress, {gasPrice: gasPrice});
-    await runVerifyAndSleep({
+    await runVerifyAndExport({
       address: migrator.address,
       constructorArguments: [dmmRouterAddress],
+      outputFilename: 'migrator',
     });
     migratorAddress = migrator.address;
   } else {
@@ -68,9 +69,10 @@ async function main() {
   if (testTokenAddress == undefined) {
     // name/symbol/total_supply
     testToken = await TestToken.new('Test token', 'TST', new BN(10).pow(new BN(32)), {gasPrice: gasPrice});
-    await runVerifyAndSleep({
+    await runVerifyAndExport({
       address: testToken.address,
       constructorArguments: ['Test token', 'TST', new BN(10).pow(new BN(32)).toString()],
+      outputFilename: 'testToken',
     });
     testTokenAddress = testToken.address;
   } else {
@@ -88,9 +90,10 @@ async function main() {
     tokenWithFee = await MockFeeOnTransferERC20.new('Test Fee Token', 'FTST', new BN(10).pow(new BN(32)), {
       gasPrice: gasPrice,
     });
-    await runVerifyAndSleep({
+    await runVerifyAndExport({
       address: tokenWithFee.address,
       constructorArguments: ['Test Fee Token', 'FTST', new BN(10).pow(new BN(32)).toString()],
+      outputFilename: 'testFeeToken',
     });
     tokenWithFeeAddress = tokenWithFee.address;
   } else {

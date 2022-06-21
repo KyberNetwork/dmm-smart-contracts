@@ -1,4 +1,4 @@
-const {runVerifyAndSleep} = require('./helper');
+const {runVerifyAndExport} = require('./helper');
 
 const KSFactory = artifacts.require('KSFactory');
 const KSRouter02 = artifacts.require('KSRouter02');
@@ -14,16 +14,19 @@ async function main() {
   const factory = await KSFactory.new(accounts[0]);
   console.log('Factory V2 deployed to:', factory.address);
 
-  await runVerifyAndSleep({
+  await runVerifyAndExport({
     address: factory.address,
     constructorArguments: [accounts[0]],
+    outputFilename: 'factory',
   });
 
   const router = await KSRouter02.new(factory.address, wethAddress);
   console.log('Router deployed to:', router.address);
-  await runVerifyAndSleep({
+
+  await runVerifyAndExport({
     address: router.address,
     constructorArguments: [factory.address, wethAddress],
+    outputFilename: 'router',
   });
 }
 

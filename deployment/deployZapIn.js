@@ -1,4 +1,4 @@
-const {runVerifyAndSleep} = require('./helper');
+const {runVerifyAndExport} = require('./helper');
 
 const ZapIn = artifacts.require('ZapIn');
 
@@ -13,9 +13,10 @@ async function main() {
 
   const zapIn = await ZapIn.new(factoryAddress, wethAddress);
   console.log('zapIn deployed to:', zapIn.address);
-  await runVerifyAndSleep({
+  await runVerifyAndExport({
     address: zapIn.address,
     constructorArguments: [factoryAddress, wethAddress],
+    outputFilename: 'zapIn',
   });
 }
 

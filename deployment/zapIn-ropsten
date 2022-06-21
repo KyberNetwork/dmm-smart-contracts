@@ -1,0 +1,8 @@
+{
+  "address": "0xcD0770DCC9ff538a5EE67218A2487c2A3688E379",
+  "constructorArguments": [
+    "0x0639542a5cd99bd5f4e85f58cb1f61d8fbe32de9",
+    "0xc778417e063141139fce010982780140aa0cd5ab"
+  ],
+  "network": "ropsten"
+}
