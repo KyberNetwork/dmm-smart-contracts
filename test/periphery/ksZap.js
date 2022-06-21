@@ -21,6 +21,7 @@ contract('KSZap', (accounts) => {
   let ksZap;
   let pool;
   let token0Addr;
+  let router;
 
   let ampBpsArr = [10000, 15000];
   ampBpsArr.forEach((ampBps) => {
@@ -34,7 +35,7 @@ contract('KSZap', (accounts) => {
         // for whitelisted factory test
         newFactory = await KSFactory.new(accounts[0]);
 
-        let router = await KSRouter.new(factory.address, weth.address);
+        router = await KSRouter.new(factory.address, weth.address);
         // set up pool with 100 token and 30 eth
         await token.approve(router.address, MaxUint256);
         await router.addLiquidityNewPoolETH(
@@ -198,6 +199,51 @@ contract('KSZap', (accounts) => {
             value: userIn,
           }),
           'KSZap: Forbidden'
+        );
+      });
+
+      it('#calculateZapOutAmount', async () => {
+        const tokenA = await TestToken.new('tstA', 'B', Helper.expandTo18Decimals(10000));
+        const tokenB = await TestToken.new('tstB', 'B', Helper.expandTo18Decimals(10000));
+
+        // set up new pool with 100 tokenA and 100 tokenB
+        await tokenA.approve(router.address, MaxUint256);
+        await tokenB.approve(router.address, MaxUint256);
+
+        await router.addLiquidityNewPool(
+          tokenA.address,
+          tokenB.address,
+          [new BN(ampBps), new BN(10)],
+          Helper.precisionUnits.mul(new BN(100)),
+          Helper.precisionUnits.mul(new BN(100)),
+          new BN(0),
+          new BN(0),
+          accounts[0],
+          MaxUint256
+        );
+        poolAddress = (await factory.getPools(tokenA.address, tokenB.address))[0];
+        liquidity = Helper.expandTo18Decimals(3);
+
+        let zapOutAmountToken0 = await ksZap.calculateZapOutAmount(
+          factory.address,
+          tokenA.address,
+          tokenB.address,
+          poolAddress,
+          liquidity
+        );
+
+        let zapOutAmountToken1 = await ksZap.calculateZapOutAmount(
+          factory.address,
+          tokenB.address,
+          tokenA.address,
+          poolAddress,
+          liquidity
+        );
+
+        Helper.assertEqual(
+          zapOutAmountToken0,
+          zapOutAmountToken1,
+          'unexpected zapOut amount between tokenIn is token0 or token1'
         );
       });
 
