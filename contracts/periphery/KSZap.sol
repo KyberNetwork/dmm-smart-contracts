@@ -306,7 +306,7 @@ contract KSZap {
         uint256 liquidity,
         address pool,
         uint256 minTokenOut
-    ) internal whitelistedFactory(factory) returns (uint256 amountOut) {
+    ) internal returns (uint256 amountOut) {
         uint256 amountIn;
         {
             require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
@@ -341,7 +341,6 @@ contract KSZap {
     )
         internal
         view
-        whitelistedFactory(factory)
         returns (
             uint256 amountIn,
             uint256 amountOut,
@@ -380,7 +379,7 @@ contract KSZap {
         IKSFactory factory,
         IKSPool pool,
         ReserveData memory data
-    ) internal view whitelistedFactory(factory) returns (uint256 totalSupply) {
+    ) internal view returns (uint256 totalSupply) {
         totalSupply = IERC20(address(pool)).totalSupply();
 
         (address feeTo, uint24 governmentFeeUnits) = factory.getFeeConfiguration();
