@@ -44,6 +44,7 @@ module.exports = {
   networks: {
     hardhat: {
       blockGasLimit: 12500000,
+      initialBaseFeePerGas: 0,
       accounts: [
         // 20 accounts with 10^14 ETH each
         // Addresses:
