@@ -14,7 +14,7 @@ import "../interfaces/IWETH.sol";
 import "../interfaces/IERC20Permit.sol";
 
 /// @dev detail here: https://hackmd.io/vdqxJx8STNqPm0LG8vGWaw
-contract KSZapIn {
+contract KSZap {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -29,19 +29,56 @@ contract KSZapIn {
     uint256 private constant PRECISION = 1e18;
     uint256 internal constant Q112 = 2**112;
 
+    address public configMaster;
+    mapping(IKSFactory => bool) public whitelistedFactories;
     address public immutable weth;
 
-    modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "KSRouter: EXPIRED");
+    event ConfigMasterUpdated(address oldConfigMaster, address newConfigMaster);
+    event FactoryAdded(IKSFactory factory);
+    event FactoryRemoved(IKSFactory factory);
+
+    modifier onlyConfigMaster() {
+        require(msg.sender == configMaster, "KSZap: Forbidden");
         _;
     }
 
-    constructor(address _weth) public {
+    modifier whitelistedFactory(IKSFactory _factory) {
+        require(whitelistedFactories[_factory], "KSZap: Forbidden");
+        _;
+    }
+
+    modifier ensure(uint256 deadline) {
+        require(deadline >= block.timestamp, "KSZap: Expired");
+        _;
+    }
+
+    constructor(IKSFactory _factory, address _weth) public {
+        configMaster = msg.sender;
+        emit ConfigMasterUpdated(address(0), configMaster);
+
+        whitelistedFactories[_factory] = true;
+        emit FactoryAdded(_factory);
+
         weth = _weth;
     }
 
     receive() external payable {
         assert(msg.sender == weth); // only accept ETH via fallback from the WETH contract
+    }
+
+    function updateConfigMaster(address _configMaster) external onlyConfigMaster {
+        emit ConfigMasterUpdated(configMaster, _configMaster);
+        configMaster = _configMaster;
+    }
+
+    function addFactory(IKSFactory _factory) external onlyConfigMaster {
+        whitelistedFactories[_factory] = true;
+        emit FactoryAdded(_factory);
+    }
+
+    function removeFactory(IKSFactory _factory) external onlyConfigMaster {
+        whitelistedFactories[_factory] = false;
+        emit FactoryRemoved(_factory);
     }
 
     /// @dev swap eth to token and then add liquidity to a pool with token-weth
@@ -57,7 +94,7 @@ contract KSZapIn {
         address to,
         uint256 minLpQty,
         uint256 deadline
-    ) external payable ensure(deadline) returns (uint256 lpQty) {
+    ) external payable ensure(deadline) whitelistedFactory(factory) returns (uint256 lpQty) {
         IWETH(weth).deposit{value: msg.value}();
         (uint256 amountSwap, uint256 amountOutput) = calculateSwapAmounts(
             factory,
@@ -92,7 +129,7 @@ contract KSZapIn {
         address to,
         uint256 minLpQty,
         uint256 deadline
-    ) external ensure(deadline) returns (uint256 lpQty) {
+    ) external ensure(deadline) whitelistedFactory(factory) returns (uint256 lpQty) {
         (uint256 amountSwap, uint256 amountOutput) = calculateSwapAmounts(
             factory,
             tokenIn,
@@ -119,7 +156,7 @@ contract KSZapIn {
         address to,
         uint256 minTokenOut,
         uint256 deadline
-    ) external ensure(deadline) returns (uint256 amountOut) {
+    ) external ensure(deadline) whitelistedFactory(factory) returns (uint256 amountOut) {
         amountOut = _zapOut(factory, tokenIn, tokenOut, liquidity, pool, minTokenOut);
         tokenOut.safeTransfer(to, amountOut);
     }
@@ -137,9 +174,16 @@ contract KSZapIn {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external ensure(deadline) returns (uint256 amountOut) {
-        uint256 value = approveMax ? uint256(-1) : liquidity;
-        IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
+    ) external ensure(deadline) whitelistedFactory(factory) returns (uint256 amountOut) {
+        IERC20Permit(pool).permit(
+            msg.sender,
+            address(this),
+            approveMax ? uint256(-1) : liquidity,
+            deadline,
+            v,
+            r,
+            s
+        );
         amountOut = _zapOut(factory, tokenIn, tokenOut, liquidity, pool, minTokenOut);
         tokenOut.safeTransfer(to, amountOut);
     }
@@ -152,7 +196,7 @@ contract KSZapIn {
         address to,
         uint256 minTokenOut,
         uint256 deadline
-    ) external ensure(deadline) returns (uint256 amountOut) {
+    ) external ensure(deadline) whitelistedFactory(factory) returns (uint256 amountOut) {
         amountOut = _zapOut(factory, tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
         IWETH(weth).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
@@ -170,7 +214,7 @@ contract KSZapIn {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external returns (uint256 amountOut) {
+    ) external whitelistedFactory(factory) returns (uint256 amountOut) {
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IERC20Permit(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountOut = _zapOut(factory, tokenIn, IERC20(weth), liquidity, pool, minTokenOut);
@@ -184,9 +228,20 @@ contract KSZapIn {
         IERC20 tokenOut,
         address pool,
         uint256 userIn
-    ) external view returns (uint256 tokenInAmount, uint256 tokenOutAmount) {
+    )
+        external
+        view
+        whitelistedFactory(factory)
+        returns (uint256 tokenInAmount, uint256 tokenOutAmount)
+    {
         uint256 amountSwap;
-        (amountSwap, tokenOutAmount) = calculateSwapAmounts(factory, tokenIn, tokenOut, pool, userIn);
+        (amountSwap, tokenOutAmount) = calculateSwapAmounts(
+            factory,
+            tokenIn,
+            tokenOut,
+            pool,
+            userIn
+        );
         tokenInAmount = userIn.sub(amountSwap);
     }
 
@@ -196,7 +251,7 @@ contract KSZapIn {
         IERC20 tokenOut,
         address pool,
         uint256 lpQty
-    ) external view returns (uint256) {
+    ) external view whitelistedFactory(factory) returns (uint256) {
         require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
         (uint256 amountIn, uint256 amountOut, ReserveData memory data) = _calculateBurnAmount(
             factory,
@@ -222,7 +277,7 @@ contract KSZapIn {
         IERC20 tokenOut,
         address pool,
         uint256 userIn
-    ) public view returns (uint256 amountSwap, uint256 amountOutput) {
+    ) public view whitelistedFactory(factory) returns (uint256 amountSwap, uint256 amountOutput) {
         require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
         (uint256 rIn, uint256 rOut, uint256 vIn, uint256 vOut, uint256 feeInPrecision) = KSLibrary
             .getTradeInfo(pool, tokenIn, tokenOut);
@@ -251,7 +306,7 @@ contract KSZapIn {
         uint256 liquidity,
         address pool,
         uint256 minTokenOut
-    ) internal returns (uint256 amountOut) {
+    ) internal whitelistedFactory(factory) returns (uint256 amountOut) {
         uint256 amountIn;
         {
             require(factory.isPool(tokenIn, tokenOut, pool), "INVALID_POOL");
@@ -286,6 +341,7 @@ contract KSZapIn {
     )
         internal
         view
+        whitelistedFactory(factory)
         returns (
             uint256 amountIn,
             uint256 amountOut,
@@ -320,11 +376,11 @@ contract KSZapIn {
         newData.feeInPrecision = data.feeInPrecision;
     }
 
-    function _calculateSyncTotalSupply(IKSFactory factory, IKSPool pool, ReserveData memory data)
-        internal
-        view
-        returns (uint256 totalSupply)
-    {
+    function _calculateSyncTotalSupply(
+        IKSFactory factory,
+        IKSPool pool,
+        ReserveData memory data
+    ) internal view whitelistedFactory(factory) returns (uint256 totalSupply) {
         totalSupply = IERC20(address(pool)).totalSupply();
 
         (address feeTo, uint24 governmentFeeUnits) = factory.getFeeConfiguration();
@@ -338,13 +394,9 @@ contract KSZapIn {
         if (_tmp / data.vIn == _kLast) {
             collectedFee0 = data.vIn.sub(MathExt.sqrt(_tmp.div(data.vOut)));
         } else {
-            collectedFee0 = data.vIn.sub(
-                MathExt.sqrt(_kLast.div(data.vOut).mul(data.vIn))
-            );
+            collectedFee0 = data.vIn.sub(MathExt.sqrt(_kLast.div(data.vOut).mul(data.vIn)));
         }
-        uint256 poolValueInToken0 = data.rIn.add(
-            data.rOut.mul(data.vIn).div(data.vOut)
-        );
+        uint256 poolValueInToken0 = data.rIn.add(data.rOut.mul(data.vIn).div(data.vOut));
         uint256 numerator = totalSupply.mul(collectedFee0).mul(governmentFeeUnits);
         uint256 denominator = (poolValueInToken0.sub(collectedFee0)).mul(50000);
         uint256 liquidity = numerator / denominator;
