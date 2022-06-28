@@ -4,7 +4,7 @@ require('@nomiclabs/hardhat-web3');
 require('@nomiclabs/hardhat-etherscan');
 require('hardhat-contract-sizer');
 require('solidity-coverage');
-
+require('hardhat-deploy');
 require('dotenv').config();
 
 task('accounts', 'Prints the list of accounts', async () => {
@@ -41,8 +41,64 @@ module.exports = {
     },
   },
   defaultNetwork: 'hardhat',
+  namedAccounts: {
+    weth: {
+      mainnet: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 
+      rinkeby: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+      ropsten: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+      goerli: '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6',
+      kovan: '0xd0A1E359811322d97991E03f863a0C30C2cF029C',
+      polygon: '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
+      polygon_testnet: '0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa',
+      avax: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+      avax_testnet: '0xB767287A7143759f294CfB7b1Adbca1140F3de71',
+      cronos: '0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23',
+      ftm: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83',
+      ftm_testnet: '0x84C7dD519Ea924bf1Cf6613f9127F26D7aB801D0',
+      arbitrum: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+      arbitrum_testnet: '0x207eD1742cc0BeBD03E50e855d3a14E41f93A461',
+      aurora: '0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB',
+      oasis: '0x21C718C22D52d0F3a789b752D4c2fD5908a8A733',
+      optimism: '0x4200000000000000000000000000000000000006',
+      optimism_testnet: '0x4200000000000000000000000000000000000006',
+      bsc: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
+      bttc: '0x8d193c6efa90bcff940a98785d1ce9d093d3dc8a',
+      velas: '0xc579D1f3CF86749E05CD06f7ADe17856c2CE3126',
+    },
+    deployer: 0,
+    ksFactoryAddress: {
+      // already deployed ks factory contract addresses
+      default: '0x1c758aF0688502e49140230F6b0EBd376d429be5',
+      ropsten: '0xB332f6145A5b064f58FF9793ba3523245F8fafaC',
+      rinkeby: '0x1811E801C09CCDa73b50fB3493254d05e9aE641F',
+      aurora: '0x39a8809fbbf22ccaeac450eaf559c076843eb910',
+      arbitrum: '0x51E8D106C646cA58Caf32A47812e95887C071a62',
+      arbitrum_testnet: '0x9D4ffbf49cc21372c2115Ae4C155a1e5c0aACf36',
+    },
+    dmmFactoryAddress: {
+      // already deployed dmm factory contract addresses
+      mainnet: '0x833e4083B7ae46CeA85695c4f7ed25CDAd8886dE',
+      ropsten: '0x0639542a5cd99bd5f4e85f58cb1f61d8fbe32de9',
+      polygon: '0x5F1fe642060B5B9658C15721Ea22E982643c095c',
+      polygon_testnet: '0x7900309d0b1c8D3d665Ae40e712E8ba4FC4F5453',
+      bsc_testnet: '0x7900309d0b1c8D3d665Ae40e712E8ba4FC4F5453',
+      bsc: '0x878dFE971d44e9122048308301F540910Bbd934c',
+      avax_testnet: '0x878dFE971d44e9122048308301F540910Bbd934c',
+      avax: '0x10908C875D865C66f271F5d3949848971c9595C9',
+      ftm_testnet: '0x10908C875D865C66f271F5d3949848971c9595C9',
+      ftm: '0x78df70615ffc8066cc0887917f2Cd72092C86409',
+      cronos: '0xD9bfE9979e9CA4b2fe84bA5d4Cf963bBcB376974',
+      aurora: '0xD9bfE9979e9CA4b2fe84bA5d4Cf963bBcB376974',
+      arbitrum: '0xD9bfE9979e9CA4b2fe84bA5d4Cf963bBcB376974',
+      bttc: '0xD9bfE9979e9CA4b2fe84bA5d4Cf963bBcB376974',
+      oasis: '0xD9bfE9979e9CA4b2fe84bA5d4Cf963bBcB376974',
+    },
+    // add more named addresses if needed
+  },
   networks: {
     hardhat: {
+      saveDeployments: true,
+      live: false,
       blockGasLimit: 12500000,
       initialBaseFeePerGas: 0,
       accounts: [
@@ -157,6 +213,9 @@ module.exports = {
   paths: {
     sources: './contracts',
     tests: './test',
+    deploy: './deploy',
+    deployments: './deployments',
+    imports: './imports',
   },
 };
 
@@ -322,6 +381,11 @@ if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
     timeout: 20000,
   };
 }
+
+Object.keys(module.exports.networks).map((k) => {
+  if (!['hardhat', 'localhost'].includes(k))
+    module.exports.networks[k] = {...module.exports.networks[k], saveDeployments: true, live: true};
+});
 
 const envValueOrEmpty = (envKey) => (process.env[envKey] != undefined ? process.env[envKey] : '');
 
