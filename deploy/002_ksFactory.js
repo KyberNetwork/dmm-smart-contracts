@@ -1,9 +1,8 @@
 const {runVerify} = require('./helpers');
 
 let ksFactory = async ({getNamedAccounts, deployments, getChainId}) => {
-  const {deploy,save, getArtifact} = deployments;
+  const {deploy, save, getArtifact} = deployments;
   const {deployer, ksFactoryAddress} = await getNamedAccounts();
-
 
   // if ksFactory is already deployed (setup in hardhat config), save to deployments path
   // else deploy new one and save deployment

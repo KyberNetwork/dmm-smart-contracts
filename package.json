@@ -32,7 +32,7 @@
     "test": "yarn hardhat test --no-compile",
     "solhint": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
     "prettier": "./node_modules/.bin/prettier --write contracts/",
-    "prettierAll": "./node_modules/.bin/prettier --write contracts/* && ./node_modules/.bin/prettier --write test/**/*.js  && ./node_modules/.bin/prettier --write deployment/*",
+    "prettierAll": "./node_modules/.bin/prettier --write contracts/* && ./node_modules/.bin/prettier --write test/**/*.js  && ./node_modules/.bin/prettier --write deploy/*",
     "lint": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
     "coverage": "./coverage.sh"
   },
