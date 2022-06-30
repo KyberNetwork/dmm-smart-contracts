@@ -1,30 +1,24 @@
-const {runVerify} = require('./helpers');
+const {runVerify, deployIfNotExisted, deployWethIfDev} = require('./helpers');
 
-let dmm = async ({getNamedAccounts, deployments, getChainId, network}) => {
+let dmm = async ({getNamedAccounts, deployments, network}) => {
   const {deploy} = deployments;
-  const {deployer} = await getNamedAccounts();
+  const {deployer, dmmRouterAddress} = await getNamedAccounts();
   let {weth} = await getNamedAccounts();
 
-  if (['hardhat', 'localhost'].includes(network.name) && weth == undefined) {
-    // hardhat chainId
-    WETH = await deploy('WETH9', {
+  weth = await deployWethIfDev({weth});
+
+  const DMMFactory = await deployments.get('DMMFactory');
+  const DMMRouter = await deployIfNotExisted({
+    namedAddress: dmmRouterAddress,
+    deploymentName: 'DMMRouter02',
+    options: {
       from: deployer,
-      args: [],
+      contract: 'DMMRouter02',
+      args: [DMMFactory.address, weth],
       autoMine: true,
       log: true,
       skipIfAlreadyDeployed: true,
-    });
-    weth = WETH.address;
-  }
-
-  const DMMFactory = await deployments.get('DMMFactory');
-  const DMMRouter = await deploy('DMMRouter02', {
-    from: deployer,
-    contract: 'DMMRouter02',
-    args: [DMMFactory.address, weth],
-    autoMine: true,
-    log: true,
-    skipIfAlreadyDeployed: true,
+    },
   });
 
   await runVerify({

@@ -1,3 +1,5 @@
+const {task} = require('hardhat/config');
+
 require('@nomiclabs/hardhat-truffle5');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-web3');
@@ -14,6 +16,21 @@ task('accounts', 'Prints the list of accounts', async () => {
     console.log(account);
   }
 });
+
+// task to verify contracts that already had deployment
+// use this task if the runVerify failed in deploy process
+task('deploymentVerify', 'verify contracts from deployments')
+  .addParam('deploymentName', 'deployment name')
+  .setAction(async ({deploymentName}, hre) => {
+    const deployResult = await hre.deployments.getOrNull(deploymentName);
+    if (!deployResult) return;
+    else {
+      await hre.run('verify:verify', {
+        address: deployResult.address,
+        constructorArguments: deployResult.args,
+      });
+    }
+  });
 
 module.exports = {
   solidity: {
@@ -44,8 +61,13 @@ module.exports = {
   namedAccounts: {
     deployer: 0,
     weth: require('./deployConfigs/weth.json'),
-    ksFactoryAddress: require('./deployConfigs/ksFactory.json'),
+    ksFactoryStaticFeesAddress: require('./deployConfigs/ksFactoryStaticFees.json'),
+    ksRouterStaticFeesAddress: require('./deployConfigs/ksRouterStaticFees.json'),
+    ksFactoryNoDynamicFeeAddress: require('./deployConfigs/ksFactoryNoDynamicFee.json'),
+    ksRouterNoDynamicFeeAddress: require('./deployConfigs/ksRouterNoDynamicFee.json'),
     dmmFactoryAddress: require('./deployConfigs/dmmFactory.json'),
+    dmmRouterAddress: require('./deployConfigs/dmmRouter.json'),
+    zapInStaticFeesAddress: require('./deployConfigs/zapInStaticFees.json'),
     // add more named addresses if needed
   },
   networks: {

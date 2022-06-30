@@ -1,30 +1,21 @@
-const {runVerify} = require('./helpers');
+const {runVerify, deployWethIfDev, deployIfNotExisted} = require('./helpers');
 
-let zapIn = async ({getNamedAccounts, deployments, getChainId}) => {
-  const {deploy} = deployments;
-  const {deployer} = await getNamedAccounts();
+let zapIn = async ({getNamedAccounts, deployments}) => {
+  const {deployer, zapInStaticFeesAddress} = await getNamedAccounts();
   let {weth} = await getNamedAccounts();
 
-  if (['hardhat', 'localhost'].includes(network.name) && weth == undefined) {
-    // hardhat chainId
-    WETH = await deploy('WETH9', {
+  weth = await deployWethIfDev({weth});
+  const DMMFactory = await deployments.get('DMMFactory');
+  const ZapIn = await deployIfNotExisted({
+    namedAddress: zapInStaticFeesAddress,
+    deploymentName: 'ZapIn',
+    options: {
       from: deployer,
-      args: [],
+      args: [DMMFactory.address, weth],
       autoMine: true,
       log: true,
       skipIfAlreadyDeployed: true,
-    });
-    weth = WETH.address;
-  }
-
-  const DMMFactory = await deployments.get('DMMFactory');
-
-  const ZapIn = await deploy('ZapIn', {
-    from: deployer,
-    args: [DMMFactory.address, weth],
-    autoMine: true,
-    log: true,
-    skipIfAlreadyDeployed: true,
+    },
   });
 
   await runVerify({

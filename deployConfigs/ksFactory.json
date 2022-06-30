@@ -1,8 +1,0 @@
-{
-  "default": "0x1c758aF0688502e49140230F6b0EBd376d429be5",
-  "ropsten": "0xB332f6145A5b064f58FF9793ba3523245F8fafaC",
-  "rinkeby": "0x1811E801C09CCDa73b50fB3493254d05e9aE641F",
-  "aurora": "0x39a8809fbbf22ccaeac450eaf559c076843eb910",
-  "arbitrum": "0x51E8D106C646cA58Caf32A47812e95887C071a62",
-  "arbitrum_testnet": "0x9D4ffbf49cc21372c2115Ae4C155a1e5c0aACf36"
-}
