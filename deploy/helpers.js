@@ -40,6 +40,9 @@ async function deployIfNotExisted({namedAddress, deploymentName, options}) {
 
 async function deployWethIfDev({weth}) {
   // deploy mock weth if local chain
+  const {getNamedAccounts} = hre;
+  const {deploy} = hre.deployments;
+  const {deployer} = await getNamedAccounts();
   if (['hardhat', 'localhost'].includes(network.name) && weth == undefined) {
     // hardhat chainId
     WETH = await deploy('WETH9', {
