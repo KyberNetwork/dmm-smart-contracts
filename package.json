@@ -32,21 +32,26 @@
     "test": "yarn hardhat test --no-compile",
     "solhint": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
     "prettier": "./node_modules/.bin/prettier --write contracts/",
+    "prettierAll": "./node_modules/.bin/prettier --write contracts/* && ./node_modules/.bin/prettier --write test/**/*.js  && ./node_modules/.bin/prettier --write deploy/*",
     "lint": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
     "coverage": "./coverage.sh"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "2.0.0",
-    "@nomiclabs/hardhat-etherscan": "^2.0.1",
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
+    "@nomiclabs/hardhat-etherscan": "^3.1.0",
     "@nomiclabs/hardhat-ganache": "2.0.0",
     "@nomiclabs/hardhat-truffle5": "2.0.0",
     "@nomiclabs/hardhat-web3": "2.0.0",
     "@openzeppelin/test-helpers": "0.5.6",
+    "@uniswap/lib": "1.1.1",
+    "@uniswap/v2-core": "1.0.1",
+    "@uniswap/v2-periphery": "1.1.0-beta.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "chai-bn": "0.2.1",
     "dotenv": "8.2.0",
-    "hardhat": "2.0.3",
+    "ethers": "^5.6.9",
+    "hardhat": "^2.9.9",
     "hardhat-contract-sizer": "2.0.2",
     "husky": "4.3.0",
     "prettier": "2.0.2",
@@ -56,13 +61,10 @@
     "solidity-coverage": "0.7.12",
     "typescript": "3.9.7",
     "web3": "1.2.6",
-    "@uniswap/lib": "1.1.1",
-    "@uniswap/v2-core": "1.0.1",
-    "@uniswap/v2-periphery": "1.1.0-beta.0",
-    "ethers": "5.0.0",
     "web3-eth-abi": "1.2.11"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "3.4.1"
+    "@openzeppelin/contracts": "3.4.1",
+    "hardhat-deploy": "^0.11.10"
   }
 }

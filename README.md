@@ -35,3 +35,19 @@ MATIC_VIGIL_KEY = 'xxxxx'
 ## Run coverage
 
 `./coverage.sh`
+
+--- 
+## Deploy
+`npx hardhat deploy`
+Example: `npx hardhat deploy --tags KyberSwap --network rinkeby --gasprice 30000000`
+#### Options
+`--export <filepath>`: export one file that contains all contracts (address, abi + extra data) for the network being invoked. The file contains the minimal information so to not bloat your frontend.
+`--export-all <filepath>`: export one file that contains all contracts across all saved deployments, regardless of the network being invoked.
+`--tags <tags>`: only excute deploy scripts with the given tags (separated by commas) and their dependencies
+`--gasprice <gasprice>` : specify the gasprice (in wei) to use by default for transactions executed via hardhat-deploy helpers in deploy scripts
+#### Flags
+`--reset`: This flag resets the deployments from scratch. Previously deployed contract are not considered and deleted from disk.
+`--silent`: This flag remove hardhat-deploy log output (see log function and log options for hre.deployments)
+`--watch`: This flag make the task never ending, watching for file changes in the deploy scripts folder and the contract source folder. If any changes happen the contracts are recompiled and the deploy script are re-run. Combined with a proxy deployment (Proxies or Diamond) this allow to have HCR (Hot Contract Replacement).
+
+---

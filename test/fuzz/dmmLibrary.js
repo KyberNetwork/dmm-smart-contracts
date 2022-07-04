@@ -74,21 +74,17 @@ contract('DMMLibrary', function (accounts) {
   }
 });
 
-function genRandomSeed (base) {
+function genRandomSeed(base) {
   return Math.floor(Math.random() * base) % base;
 }
 
-function genRandomBN (minBN, maxBN) {
+function genRandomBN(minBN, maxBN) {
   let seed = new BN(genRandomSeed(1000000000000000));
   // normalise seed
-  return maxBN
-    .sub(minBN)
-    .mul(seed)
-    .div(new BN(1000000000000000))
-    .add(minBN);
+  return maxBN.sub(minBN).mul(seed).div(new BN(1000000000000000)).add(minBN);
 }
 
-async function setupPool (admin, library, isAmpPool) {
+async function setupPool(admin, library, isAmpPool) {
   let factory = await DMMFactory.new(admin);
   let tokenA = await TestToken.new('test token A', 'A', Helper.expandTo18Decimals(10000));
   let tokenB = await TestToken.new('test token B', 'B', Helper.expandTo18Decimals(10000));
@@ -101,7 +97,7 @@ async function setupPool (admin, library, isAmpPool) {
   return [factory, token0, token1, pool];
 }
 
-async function addLiquidity (liquidityProvider, token0Amount, token1Amount) {
+async function addLiquidity(liquidityProvider, token0Amount, token1Amount) {
   await token0.transfer(pool.address, token0Amount);
   await token1.transfer(pool.address, token1Amount);
   await pool.mint(liquidityProvider);

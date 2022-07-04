@@ -104,7 +104,7 @@ contract('DMMRouter', function (accounts) {
       console.log('gas used', result.receipt.gasUsed);
       await expectEvent.inTransaction(result.tx, pool, 'Sync', {
         reserve0: tokenA.address == token0Address ? tokenAAmount : tokenBAmount,
-        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount
+        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount,
       });
       const expectedLiquidity = Helper.sqrt(tokenAAmount.mul(tokenBAmount)).sub(MINIMUM_LIQUIDITY);
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
@@ -126,7 +126,7 @@ contract('DMMRouter', function (accounts) {
       pool = await DMMPool.at(poolAddresses[1]);
       await expectEvent.inTransaction(result.tx, pool, 'Sync', {
         reserve0: tokenA.address == token0Address ? tokenAAmount : tokenBAmount,
-        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount
+        reserve1: tokenA.address == token0Address ? tokenBAmount : tokenAAmount,
       });
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
       // addliquidity for unamplified again
@@ -171,7 +171,7 @@ contract('DMMRouter', function (accounts) {
       console.log('gas used', result.receipt.gasUsed);
       await expectEvent.inTransaction(result.tx, pool, 'Sync', {
         reserve0: token.address == token0Address ? tokenAmount : ethAmount,
-        reserve1: token.address == token0Address ? ethAmount : tokenAmount
+        reserve1: token.address == token0Address ? ethAmount : tokenAmount,
       });
       const expectedLiquidity = Helper.sqrt(tokenAmount.mul(ethAmount)).sub(MINIMUM_LIQUIDITY);
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
@@ -191,7 +191,7 @@ contract('DMMRouter', function (accounts) {
       pool = await DMMPool.at(poolAddresses[1]);
       await expectEvent.inTransaction(result.tx, pool, 'Sync', {
         reserve0: token.address == token0Address ? tokenAmount : ethAmount,
-        reserve1: token.address == token0Address ? ethAmount : tokenAmount
+        reserve1: token.address == token0Address ? ethAmount : tokenAmount,
       });
       Helper.assertEqual(await pool.balanceOf(liquidityProvider), expectedLiquidity, 'unexpected liquidity');
       // addliquidity for unamplified again
@@ -234,12 +234,12 @@ contract('DMMRouter', function (accounts) {
       console.log('gas used', result.receipt.gasUsed);
       await expectEvent.inTransaction(result.tx, pool, 'Sync', {
         reserve0: token0Amount,
-        reserve1: token1Amount
+        reserve1: token1Amount,
       });
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: token0Amount,
-        amount1: token1Amount
+        amount1: token1Amount,
       });
       // when call add Liquidity, the router will add token to the pool with the current ratio
       let updateAmount = Helper.expandTo18Decimals(2);
@@ -347,7 +347,7 @@ contract('DMMRouter', function (accounts) {
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: expectedToken0Amount,
-        amount1: updateAmount
+        amount1: updateAmount,
       });
 
       // similar test with token 1
@@ -372,7 +372,7 @@ contract('DMMRouter', function (accounts) {
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: updateAmount,
-        amount1: expectedToken1Amount
+        amount1: expectedToken1Amount,
       });
     });
 
@@ -415,12 +415,12 @@ contract('DMMRouter', function (accounts) {
       console.log('addLiquidityETH 1st time: gas used', result.receipt.gasUsed);
       await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
         reserve0: token0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-        reserve1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount
+        reserve1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount,
       });
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: token0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount
+        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount,
       });
       Helper.assertEqual(await ethPool.balanceOf(trader), expectedLiquidity.sub(MINIMUM_LIQUIDITY));
 
@@ -439,7 +439,7 @@ contract('DMMRouter', function (accounts) {
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: token0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount
+        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount,
       });
       Helper.assertEqual(await ethPool.balanceOf(trader), expectedLiquidity.mul(new BN(2)).sub(MINIMUM_LIQUIDITY));
 
@@ -459,7 +459,7 @@ contract('DMMRouter', function (accounts) {
       await expectEvent.inTransaction(result.tx, pool, 'Mint', {
         sender: router.address,
         amount0: token0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount
+        amount1: token0 === ethPartner.address ? ethAmount : ethPartnerAmount,
       });
       Helper.assertEqual(await ethPool.balanceOf(trader), expectedLiquidity.mul(new BN(3)).sub(MINIMUM_LIQUIDITY));
     });
@@ -549,13 +549,13 @@ contract('DMMRouter', function (accounts) {
     console.log('gas used', result.receipt.gasUsed);
     await expectEvent.inTransaction(result.tx, pool, 'Sync', {
       reserve0: new BN(500),
-      reserve1: new BN(2000)
+      reserve1: new BN(2000),
     });
     await expectEvent.inTransaction(result.tx, pool, 'Burn', {
       sender: router.address,
       amount0: token0Amount.sub(new BN(500)),
       amount1: token1Amount.sub(new BN(2000)),
-      to: trader
+      to: trader,
     });
 
     Helper.assertEqual(await pool.balanceOf(trader), new BN(0));
@@ -589,14 +589,14 @@ contract('DMMRouter', function (accounts) {
     console.log('gas used', result.receipt.gasUsed);
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: token0 === ethPartner.address ? new BN(500) : new BN(2000),
-      reserve1: token0 === ethPartner.address ? new BN(2000) : new BN(500)
+      reserve1: token0 === ethPartner.address ? new BN(2000) : new BN(500),
     });
 
     await expectEvent.inTransaction(result.tx, ethPool, 'Burn', {
       sender: router.address,
       amount0: token0 === ethPartner.address ? ethPartnerAmount.sub(new BN(500)) : ethAmount.sub(new BN(2000)),
       amount1: token0 === ethPartner.address ? ethAmount.sub(new BN(2000)) : ethPartnerAmount.sub(new BN(500)),
-      to: router.address
+      to: router.address,
     });
     Helper.assertEqual(await ethPool.balanceOf(trader), new BN(0));
     Helper.assertEqual(await ethPartner.balanceOf(trader), initTokenAmount.sub(new BN(500)));
@@ -642,13 +642,13 @@ contract('DMMRouter', function (accounts) {
     console.log('gas used', result.receipt.gasUsed);
     await expectEvent.inTransaction(result.tx, pool, 'Sync', {
       reserve0: new BN(500),
-      reserve1: new BN(2000)
+      reserve1: new BN(2000),
     });
     await expectEvent.inTransaction(result.tx, pool, 'Burn', {
       sender: router.address,
       amount0: token0Amount.sub(new BN(500)),
       amount1: token1Amount.sub(new BN(2000)),
-      to: liquidityProvider
+      to: liquidityProvider,
     });
 
     Helper.assertEqual(await pool.nonces(liquidityProvider), new BN(1));
@@ -725,13 +725,13 @@ contract('DMMRouter', function (accounts) {
     console.log('gas used', result.receipt.gasUsed);
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: token0 === ethPartner.address ? new BN(500) : new BN(2000),
-      reserve1: token0 === ethPartner.address ? new BN(2000) : new BN(500)
+      reserve1: token0 === ethPartner.address ? new BN(2000) : new BN(500),
     });
     await expectEvent.inTransaction(result.tx, ethPool, 'Burn', {
       sender: router.address,
       amount0: token0 === ethPartner.address ? ethPartnerAmount.sub(new BN(500)) : ethAmount.sub(new BN(2000)),
       amount1: token0 === ethPartner.address ? ethAmount.sub(new BN(2000)) : ethPartnerAmount.sub(new BN(500)),
-      to: router.address
+      to: router.address,
     });
 
     Helper.assertEqual(await pool.balanceOf(liquidityProvider), new BN(0));
@@ -860,7 +860,7 @@ contract('DMMRouter', function (accounts) {
       router.swapETHForExactTokens(outputAmount, poolsPath, [token0.address, ethPartner.address], trader, bigAmount, {
         from: trader,
         value: swapAmount,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: INVALID_PATH'
     );
@@ -869,7 +869,7 @@ contract('DMMRouter', function (accounts) {
       router.swapETHForExactTokens(outputAmount, poolsPath, path, trader, bigAmount, {
         from: trader,
         value: expectAmountIn.sub(new BN(1)),
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: EXCESSIVE_INPUT_AMOUNT'
     );
@@ -877,7 +877,7 @@ contract('DMMRouter', function (accounts) {
     result = await router.swapETHForExactTokens(outputAmount, poolsPath, path, trader, bigAmount, {
       from: trader,
       value: swapAmount,
-      gasPrice: new BN(0)
+      gasPrice: new BN(0),
     });
     console.log('gas used', result.receipt.gasUsed);
 
@@ -887,12 +887,12 @@ contract('DMMRouter', function (accounts) {
       amount1In: ethPoolToken0 === ethPartner.address ? expectAmountIn : new BN(0),
       amount0Out: ethPoolToken0 === ethPartner.address ? outputAmount : new BN(0),
       amount1Out: ethPoolToken0 === ethPartner.address ? new BN(0) : outputAmount,
-      to: trader
+      to: trader,
     });
 
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: ethPoolToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount,
     });
 
     Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.add(outputAmount));
@@ -905,7 +905,7 @@ contract('DMMRouter', function (accounts) {
     result = await router.swapETHForExactTokens(outputAmount, poolsPath, path, trader, bigAmount, {
       from: trader,
       value: expectAmountIn,
-      gasPrice: new BN(0)
+      gasPrice: new BN(0),
     });
     console.log('gas used', result.receipt.gasUsed);
   });
@@ -934,20 +934,20 @@ contract('DMMRouter', function (accounts) {
     await expectRevert(
       router.swapExactTokensForETH(swapAmount, 0, poolsPath, [ethPartner.address, token0.address], trader, bigAmount, {
         from: trader,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: INVALID_PATH'
     );
     await expectRevert(
       router.swapExactTokensForETH(swapAmount, expectAmountOut.add(BNOne), poolsPath, path, trader, bigAmount, {
         from: trader,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: INSUFFICIENT_OUTPUT_AMOUNT'
     );
     let result = await router.swapExactTokensForETH(swapAmount, 0, poolsPath, path, trader, bigAmount, {
       from: trader,
-      gasPrice: new BN(0)
+      gasPrice: new BN(0),
     });
     console.log('gas used', result.receipt.gasUsed);
 
@@ -955,7 +955,7 @@ contract('DMMRouter', function (accounts) {
     ethAmount = ethAmount.sub(expectAmountOut);
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: ethPoolToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount,
     });
     await expectEvent.inTransaction(result.tx, ethPool, 'Swap', {
       sender: router.address,
@@ -963,7 +963,7 @@ contract('DMMRouter', function (accounts) {
       amount1In: ethPoolToken0 === ethPartner.address ? new BN(0) : swapAmount,
       amount0Out: ethPoolToken0 === ethPartner.address ? new BN(0) : expectAmountOut,
       amount1Out: ethPoolToken0 === ethPartner.address ? expectAmountOut : new BN(0),
-      to: router.address
+      to: router.address,
     });
 
     Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.sub(swapAmount));
@@ -995,7 +995,7 @@ contract('DMMRouter', function (accounts) {
     await expectRevert(
       router.swapTokensForExactETH(outputAmount, bigAmount, poolsPath, invalidPath, trader, bigAmount, {
         from: trader,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: INVALID_PATH'
     );
@@ -1003,13 +1003,13 @@ contract('DMMRouter', function (accounts) {
     await expectRevert(
       router.swapTokensForExactETH(outputAmount, expectAmountIn.sub(BNOne), poolsPath, path, trader, bigAmount, {
         from: trader,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }),
       'DMMRouter: EXCESSIVE_INPUT_AMOUNT'
     );
     let result = await router.swapTokensForExactETH(outputAmount, bigAmount, poolsPath, path, trader, bigAmount, {
       from: trader,
-      gasPrice: new BN(0)
+      gasPrice: new BN(0),
     });
     console.log('gas used', result.receipt.gasUsed);
 
@@ -1017,7 +1017,7 @@ contract('DMMRouter', function (accounts) {
     ethPartnerAmount = ethPartnerAmount.add(expectAmountIn);
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: ethPoolToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount,
     });
     await expectEvent.inTransaction(result.tx, ethPool, 'Swap', {
       sender: router.address,
@@ -1025,7 +1025,7 @@ contract('DMMRouter', function (accounts) {
       amount1In: ethPoolToken0 === ethPartner.address ? new BN(0) : expectAmountIn,
       amount0Out: ethPoolToken0 === ethPartner.address ? new BN(0) : outputAmount,
       amount1Out: ethPoolToken0 === ethPartner.address ? outputAmount : new BN(0),
-      to: router.address
+      to: router.address,
     });
 
     Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.sub(expectAmountIn));
@@ -1059,7 +1059,7 @@ contract('DMMRouter', function (accounts) {
       router.swapExactETHForTokens(0, poolsPath, invalidPath, trader, bigAmount, {
         from: trader,
         value: swapAmount,
-        gasPrice: 0
+        gasPrice: 0,
       }),
       'DMMRouter: INVALID_PATH'
     );
@@ -1067,14 +1067,14 @@ contract('DMMRouter', function (accounts) {
       router.swapExactETHForTokens(expectedOutputAmount.add(BNOne), poolsPath, path, trader, bigAmount, {
         from: trader,
         value: swapAmount,
-        gasPrice: 0
+        gasPrice: 0,
       }),
       'DMMRouter: INSUFFICIENT_OUTPUT_AMOUNT'
     );
     let result = await router.swapExactETHForTokens(0, poolsPath, path, trader, bigAmount, {
       from: trader,
       value: swapAmount,
-      gasPrice: 0
+      gasPrice: 0,
     });
     console.log('gas used', result.receipt.gasUsed);
 
@@ -1082,7 +1082,7 @@ contract('DMMRouter', function (accounts) {
     ethAmount = ethAmount.add(swapAmount);
     await expectEvent.inTransaction(result.tx, ethPool, 'Sync', {
       reserve0: ethPoolToken0 === ethPartner.address ? ethPartnerAmount : ethAmount,
-      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount
+      reserve1: ethPoolToken0 === ethPartner.address ? ethAmount : ethPartnerAmount,
     });
     await expectEvent.inTransaction(result.tx, ethPool, 'Swap', {
       sender: router.address,
@@ -1090,7 +1090,7 @@ contract('DMMRouter', function (accounts) {
       amount1In: ethPoolToken0 === ethPartner.address ? swapAmount : new BN(0),
       amount0Out: ethPoolToken0 === ethPartner.address ? expectedOutputAmount : new BN(0),
       amount1Out: ethPoolToken0 === ethPartner.address ? new BN(0) : expectedOutputAmount,
-      to: trader
+      to: trader,
     });
 
     Helper.assertEqual(await ethPartner.balanceOf(trader), tokenBalance.add(expectedOutputAmount));
@@ -1125,7 +1125,7 @@ contract('DMMRouter', function (accounts) {
         trader,
         bigAmount,
         {
-          from: trader
+          from: trader,
         }
       ),
       'DMMRouter: INSUFFICIENT_OUTPUT_AMOUNT'
@@ -1139,13 +1139,13 @@ contract('DMMRouter', function (accounts) {
     );
 
     let result = await router.swapExactTokensForTokens(swapAmount, 0, poolsPath, path, trader, bigAmount, {
-      from: trader
+      from: trader,
     });
     console.log('gas used', result.receipt.gasUsed);
 
     await expectEvent.inTransaction(result.tx, pool, 'Sync', {
       reserve0: token0Amount.add(swapAmount),
-      reserve1: token1Amount.sub(expectedOutputAmount)
+      reserve1: token1Amount.sub(expectedOutputAmount),
     });
     await expectEvent.inTransaction(result.tx, pool, 'Swap', {
       sender: router.address,
@@ -1153,7 +1153,7 @@ contract('DMMRouter', function (accounts) {
       amount1In: new BN(0),
       amount0Out: new BN(0),
       amount1Out: expectedOutputAmount,
-      to: trader
+      to: trader,
     });
 
     Helper.assertEqual(await token0.balanceOf(trader), token0Balance.sub(swapAmount));
@@ -1187,7 +1187,7 @@ contract('DMMRouter', function (accounts) {
         trader,
         bigAmount,
         {
-          from: trader
+          from: trader,
         }
       ),
       'DMMRouter: EXCESSIVE_INPUT_AMOUNT'
@@ -1196,18 +1196,18 @@ contract('DMMRouter', function (accounts) {
     let expiredTimeStamp = (await Helper.getCurrentBlockTime()) - 1;
     await expectRevert(
       router.swapTokensForExactTokens(outputAmount, bigAmount, poolsPath, path, trader, expiredTimeStamp, {
-        from: trader
+        from: trader,
       }),
       'DMMRouter: EXPIRED'
     );
 
     let result = await router.swapTokensForExactTokens(outputAmount, bigAmount, poolsPath, path, trader, bigAmount, {
-      from: trader
+      from: trader,
     });
 
     await expectEvent.inTransaction(result.tx, pool, 'Sync', {
       reserve0: token0Amount.add(expectedSwapAmount),
-      reserve1: token1Amount.sub(outputAmount)
+      reserve1: token1Amount.sub(outputAmount),
     });
 
     await expectEvent.inTransaction(result.tx, pool, 'Swap', {
@@ -1216,7 +1216,7 @@ contract('DMMRouter', function (accounts) {
       amount1In: new BN(0),
       amount0Out: new BN(0),
       amount1Out: outputAmount,
-      to: trader
+      to: trader,
     });
 
     Helper.assertEqual(await token0.balanceOf(trader), token0Balance.sub(expectedSwapAmount));
@@ -1281,7 +1281,7 @@ contract('DMMRouter', function (accounts) {
       await token0.approve(router.address, amounts[0], {from: trader});
       let balanceBefore = await token0.balanceOf(trader);
       await router.swapTokensForExactTokens(swapAmount, amounts[0], poolsPath, path, trader, Helper.MaxUint256, {
-        from: trader
+        from: trader,
       });
       Helper.assertEqual(await token0.balanceOf(trader), balanceBefore.sub(amounts[0]));
     });
@@ -1315,7 +1315,7 @@ contract('DMMRouter', function (accounts) {
         Helper.MaxUint256,
         {
           from: trader,
-          gasPrice: new BN(0)
+          gasPrice: new BN(0),
         }
       );
       Helper.assertEqual(await Helper.getBalancePromise(trader), amounts[amounts.length - 1].add(balanceBefore));
@@ -1342,7 +1342,7 @@ contract('DMMRouter', function (accounts) {
       let balanceBefore = await token0.balanceOf(trader);
       await router.swapExactETHForTokens(amounts[amounts.length - 1], poolsPath, path, trader, Helper.MaxUint256, {
         from: trader,
-        value: swapAmount
+        value: swapAmount,
       });
       Helper.assertEqual(await token0.balanceOf(trader), balanceBefore.add(amounts[amounts.length - 1]));
     });
@@ -1368,7 +1368,7 @@ contract('DMMRouter', function (accounts) {
       await token0.approve(router.address, amounts[0], {from: trader});
       let balanceBefore = await token0.balanceOf(trader);
       await router.swapTokensForExactETH(swapAmount, amounts[0], poolsPath, path, trader, Helper.MaxUint256, {
-        from: trader
+        from: trader,
       });
       Helper.assertEqual(await token0.balanceOf(trader), balanceBefore.sub(amounts[0]));
     });
@@ -1395,7 +1395,7 @@ contract('DMMRouter', function (accounts) {
       await router.swapETHForExactTokens(swapAmount, poolsPath, path, trader, Helper.MaxUint256, {
         from: trader,
         value: amounts[0].add(Helper.expandTo18Decimals(1)),
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       });
       Helper.assertEqual(await Helper.getBalancePromise(trader), balanceBefore.sub(amounts[0]));
     });
@@ -1501,11 +1501,11 @@ contract('DMMRouter', function (accounts) {
   });
 });
 
-async function setupFactory (admin) {
+async function setupFactory(admin) {
   return await DMMFactory.new(admin);
 }
 
-async function setupPool (admin, token0, token1, ampBps) {
+async function setupPool(admin, token0, token1, ampBps) {
   const factory = await setupFactory(admin);
   await factory.createPool(token0.address, token1.address, ampBps);
 
@@ -1515,7 +1515,7 @@ async function setupPool (admin, token0, token1, ampBps) {
   return [factory, pool];
 }
 
-async function addLiquidity (liquidityProvider, pool, token0, token1, token0Amount, token1Amount) {
+async function addLiquidity(liquidityProvider, pool, token0, token1, token0Amount, token1Amount) {
   await token0.transfer(pool.address, token0Amount);
   await token1.transfer(pool.address, token1Amount);
   await pool.mint(liquidityProvider);

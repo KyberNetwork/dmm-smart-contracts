@@ -1,10 +1,12 @@
+const {task} = require('hardhat/config');
+
 require('@nomiclabs/hardhat-truffle5');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-web3');
 require('@nomiclabs/hardhat-etherscan');
 require('hardhat-contract-sizer');
 require('solidity-coverage');
-
+require('hardhat-deploy');
 require('dotenv').config();
 
 task('accounts', 'Prints the list of accounts', async () => {
@@ -14,6 +16,21 @@ task('accounts', 'Prints the list of accounts', async () => {
     console.log(account);
   }
 });
+
+// task to verify contracts that already had deployment
+// use this task if the runVerify failed in deploy process
+task('deploymentVerify', 'verify contracts from deployments')
+  .addParam('deploymentName', 'deployment name')
+  .setAction(async ({deploymentName}, hre) => {
+    const deployResult = await hre.deployments.getOrNull(deploymentName);
+    if (!deployResult) return;
+    else {
+      await hre.run('verify:verify', {
+        address: deployResult.address,
+        constructorArguments: deployResult.args,
+      });
+    }
+  });
 
 module.exports = {
   solidity: {
@@ -41,9 +58,24 @@ module.exports = {
     },
   },
   defaultNetwork: 'hardhat',
+  namedAccounts: {
+    deployer: 0,
+    weth: require('./deployConfigs/weth.json'),
+    ksFactoryStaticFeesAddress: require('./deployConfigs/ksFactoryStaticFees.json'),
+    ksRouterStaticFeesAddress: require('./deployConfigs/ksRouterStaticFees.json'),
+    ksFactoryNoDynamicFeeAddress: require('./deployConfigs/ksFactoryNoDynamicFee.json'),
+    ksRouterNoDynamicFeeAddress: require('./deployConfigs/ksRouterNoDynamicFee.json'),
+    dmmFactoryAddress: require('./deployConfigs/dmmFactory.json'),
+    dmmRouterAddress: require('./deployConfigs/dmmRouter.json'),
+    zapInStaticFeesAddress: require('./deployConfigs/zapInStaticFees.json'),
+    // add more named addresses if needed
+  },
   networks: {
     hardhat: {
+      saveDeployments: true,
+      live: false,
       blockGasLimit: 12500000,
+      initialBaseFeePerGas: 0,
       accounts: [
         // 20 accounts with 10^14 ETH each
         // Addresses:
@@ -156,12 +188,14 @@ module.exports = {
   paths: {
     sources: './contracts',
     tests: './test',
+    deploy: './deploy',
+    deployments: './deployments',
+    imports: './imports',
   },
 };
 
 const INFURA_API_KEY = process.env.INFURA_API_KEY;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const MATIC_VIGIL_KEY = process.env.MATIC_VIGIL_KEY;
 
 if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
   module.exports.networks.kovan = {
@@ -174,6 +208,7 @@ if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
     url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
+    blockGasLimit: 30000000,
   };
 
   module.exports.networks.ropsten = {
@@ -187,61 +222,181 @@ if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
     accounts: [PRIVATE_KEY],
     timeout: 20000,
   };
-}
 
-if (MATIC_VIGIL_KEY != undefined && PRIVATE_KEY != undefined) {
-  module.exports.networks.mumbai = {
-    url: `https://rpc-mumbai.maticvigil.com/v1/${MATIC_VIGIL_KEY}`,
+  module.exports.networks.bsc_testnet = {
+    url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+    blockGasLimit: 30000000,
+  };
+
+  module.exports.networks.bsc = {
+    url: `https://bsc-dataseed1.ninicoin.io/`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
   };
-  module.exports.networks.matic = {
-    url: `https://rpc-mainnet.maticvigil.com/v1/${MATIC_VIGIL_KEY}`,
+
+  module.exports.networks.cronos_testnet = {
+    url: `https://cronos-testnet-3.crypto.org:8545/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.cronos = {
+    url: `https://evm-cronos.crypto.org/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.aurora_testnet = {
+    url: `https://testnet.aurora.dev/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.aurora = {
+    url: `https://mainnet.aurora.dev/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.polygon_testnet = {
+    url: `https://rpc-mumbai.maticvigil.com/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.polygon = {
+    url: `https://polygon-rpc.com/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.avax_testnet = {
+    url: `https://api.avax-test.network/ext/bc/C/rpc`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.avax = {
+    url: `https://api.avax.network/ext/bc/C/rpc`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.fantom_testnet = {
+    url: `https://rpc.testnet.fantom.network/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.fantom = {
+    url: `https://rpc.ftm.tools/`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.optimism = {
+    url: `https://optimistic.etherscan.io`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.optimism_testnet = {
+    url: `https://kovan.optimism.io`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.arbitrum = {
+    url: `https://arb1.arbitrum.io/rpc`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.arbitrum_testnet = {
+    url: `https://rinkeby.arbitrum.io/rpc`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.bttc = {
+    url: `https://bttc.dev.kyberengineering.io`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.bttc_testnet = {
+    url: `https://pre-rpc.bt.io`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.oasis = {
+    url: `https://emerald.oasis.dev`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.oasis_testnet = {
+    url: `https://testnet.emerald.oasis.dev`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.velas = {
+    url: `https://evmexplorer.velas.com/rpc`,
+    accounts: [PRIVATE_KEY],
+    timeout: 20000,
+  };
+
+  module.exports.networks.velas_testnet = {
+    url: `https://explorer.testnet.velas.com/rpc`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
   };
 }
 
-module.exports.networks.bsctestnet = {
-  url: `https://data-seed-prebsc-1-s2.binance.org:8545/`,
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
+Object.keys(module.exports.networks).map((k) => {
+  if (!['hardhat', 'localhost'].includes(k))
+    module.exports.networks[k] = {...module.exports.networks[k], saveDeployments: true, live: true};
+});
+
+const envValueOrEmpty = (envKey) => (process.env[envKey] != undefined ? process.env[envKey] : '');
+
+module.exports.etherscan = {
+  // Your API key for Etherscan
+  // Obtain one at https://etherscan.io/
+  apiKey: {
+    bscTestnet: envValueOrEmpty('BSCSCAN_API_KEY'),
+    bsc: envValueOrEmpty('BSCSCAN_API_KEY'),
+    mainnet: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    ropsten: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    rinkeby: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    goerli: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    kovan: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    optimisticEthereum: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    optimisticKovan: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    polygon: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    polygonMumbai: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    arbitrumOne: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    arbitrumTestnet: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    avalanche: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    avalancheFujiTestnet: envValueOrEmpty('ETHERSCAN_API_KEY'),
+    opera: envValueOrEmpty('ETHERSCAN_API_KEY'), // Fantom mainnet
+    ftmTestnet: envValueOrEmpty('ETHERSCAN_API_KEY'),
+  },
 };
 
-module.exports.networks.bsc = {
-  url: `https://bsc-dataseed1.ninicoin.io/`,
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
-};
-
-module.exports.networks.avaxtestnet = {
-  url: `https://api.avax-test.network/ext/bc/C/rpc`,
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
-};
-
-module.exports.networks.avax = {
-  url: `https://api.avax.network/ext/bc/C/rpc`,
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
-};
-
-module.exports.networks.fantom = {
-  url: `https://rpc.ftm.tools/`,
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
-};
-
-module.exports.networks.arbitrum = {
-  url: 'https://rinkeby.arbitrum.io/rpc',
-  accounts: [PRIVATE_KEY],
-  timeout: 20000,
-};
-
-if (process.env.ETHERSCAN_API_KEY != undefined) {
-  module.exports.etherscan = {
-    // Your API key for Etherscan
-    // Obtain one at https://etherscan.io/
-    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
-  };
-}
+// module.exports.etherscan = {
+//   customChains:[
+//     {
+//       network: "rinkeby",
+//       chainId: 4,
+//       urls: {
+//         apiURL: "https://api-rinkeby.etherscan.io/api",
+//         browserURL: "https://rinkeby.etherscan.io"
+//       }
+//     }
+//   ]
+// }

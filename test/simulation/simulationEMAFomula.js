@@ -7,7 +7,7 @@ const Helper = require('../helper');
 
 const fs = require('fs');
 
-contract('ema simulation', accounts => {
+contract('ema simulation', (accounts) => {
   // this is a long run test so disable it when running test
   it.skip('simulate fee fomula increase', async () => {
     const baseVolume = new BN(10).pow(new BN(18));
