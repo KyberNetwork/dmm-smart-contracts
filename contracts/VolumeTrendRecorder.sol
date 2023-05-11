@@ -106,7 +106,7 @@ contract VolumeTrendRecorder {
         if (_longEMA == 0) {
             return 0;
         }
-        return (_shortEMA * MathExt.PRECISION) / _longEMA;
+        return (_shortEMA * PRECISION) / _longEMA;
     }
 
     /// @dev return newEMA value

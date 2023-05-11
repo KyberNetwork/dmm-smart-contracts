@@ -9,7 +9,7 @@ import "../interfaces/IKSPool.sol";
 library KSLibrary {
     using SafeMath for uint256;
 
-    uint256 public constant PRECISION = 1e18;
+    uint256 private constant PRECISION = 1e18;
 
     // returns sorted token addresses, used to handle return values from pools sorted in this order
     function sortTokens(IERC20 tokenA, IERC20 tokenB)

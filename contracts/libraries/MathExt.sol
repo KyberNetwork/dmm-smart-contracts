@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 library MathExt {
     using SafeMath for uint256;
 
-    uint256 public constant PRECISION = (10**18);
+    uint256 private constant PRECISION = (10**18);
 
     /// @dev Returns x*y in precision
     function mulInPrecision(uint256 x, uint256 y) internal pure returns (uint256) {

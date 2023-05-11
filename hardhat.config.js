@@ -4,6 +4,9 @@ require('@nomiclabs/hardhat-web3');
 require('@nomiclabs/hardhat-etherscan');
 require('hardhat-contract-sizer');
 require('solidity-coverage');
+require('@matterlabs/hardhat-zksync-deploy');
+require('@matterlabs/hardhat-zksync-solc');
+require('@matterlabs/hardhat-zksync-verify');
 
 require('dotenv').config();
 
@@ -148,7 +151,8 @@ module.exports = {
           balance: '100000000000000000000000000000000',
         },
       ],
-    },
+      zksync: false,
+    }
   },
   mocha: {
     enableTimeouts: false,
@@ -157,6 +161,13 @@ module.exports = {
     sources: './contracts',
     tests: './test',
   },
+  zksolc: {
+    version: '1.3.10',
+    compilerSource: 'binary',
+    settings: {
+      
+    },
+  },
 };
 
 const INFURA_API_KEY = process.env.INFURA_API_KEY;
@@ -164,28 +175,11 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const MATIC_VIGIL_KEY = process.env.MATIC_VIGIL_KEY;
 
 if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
-  module.exports.networks.kovan = {
-    url: `https://kovan.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-  };
-
-  module.exports.networks.rinkeby = {
-    url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-  };
-
-  module.exports.networks.ropsten = {
-    url: `https://ropsten.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-  };
-
   module.exports.networks.mainnet = {
     url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
+    zksync: false,
   };
 }
 
@@ -194,11 +188,13 @@ if (MATIC_VIGIL_KEY != undefined && PRIVATE_KEY != undefined) {
     url: `https://rpc-mumbai.maticvigil.com/v1/${MATIC_VIGIL_KEY}`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
+    zksync: false,
   };
   module.exports.networks.matic = {
     url: `https://rpc-mainnet.maticvigil.com/v1/${MATIC_VIGIL_KEY}`,
     accounts: [PRIVATE_KEY],
     timeout: 20000,
+    zksync: false,
   };
 }
 
@@ -206,36 +202,55 @@ module.exports.networks.bsctestnet = {
   url: `https://data-seed-prebsc-1-s2.binance.org:8545/`,
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
 };
 
 module.exports.networks.bsc = {
   url: `https://bsc-dataseed1.ninicoin.io/`,
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
 };
 
 module.exports.networks.avaxtestnet = {
   url: `https://api.avax-test.network/ext/bc/C/rpc`,
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
 };
 
 module.exports.networks.avax = {
   url: `https://api.avax.network/ext/bc/C/rpc`,
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
 };
 
 module.exports.networks.fantom = {
   url: `https://rpc.ftm.tools/`,
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
 };
 
 module.exports.networks.arbitrum = {
   url: 'https://rinkeby.arbitrum.io/rpc',
   accounts: [PRIVATE_KEY],
   timeout: 20000,
+  zksync: false,
+};
+
+module.exports.networks.zkSyncTestnet = {
+  url: 'https://testnet.era.zksync.dev',
+  ethNetwork: 'goerli',
+  zksync: true,
+  verifyURL: 'https://zksync2-testnet-explorer.zksync.dev/contract_verification',
+};
+
+module.exports.networks.zkSyncMainnet = {
+  url: "https://mainnet.era.zksync.io",
+  ethNetwork: "mainnet",
+  zksync: true
 };
 
 if (process.env.ETHERSCAN_API_KEY != undefined) {
