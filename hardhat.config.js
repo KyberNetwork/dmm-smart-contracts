@@ -162,7 +162,7 @@ module.exports = {
     tests: './test',
   },
   zksolc: {
-    version: '1.2.0',
+    version: '1.3.10',
     compilerSource: 'binary',
     settings: {
       
@@ -175,27 +175,6 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const MATIC_VIGIL_KEY = process.env.MATIC_VIGIL_KEY;
 
 if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
-  module.exports.networks.kovan = {
-    url: `https://kovan.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-    zksync: false,
-  };
-
-  module.exports.networks.rinkeby = {
-    url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-    zksync: false,
-  };
-
-  module.exports.networks.ropsten = {
-    url: `https://ropsten.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-    zksync: false,
-  };
-
   module.exports.networks.mainnet = {
     url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
     accounts: [PRIVATE_KEY],
@@ -266,12 +245,13 @@ module.exports.networks.zkSyncTestnet = {
   ethNetwork: 'goerli',
   zksync: true,
   verifyURL: 'https://zksync2-testnet-explorer.zksync.dev/contract_verification',
-},
+};
+
 module.exports.networks.zkSyncMainnet = {
   url: "https://mainnet.era.zksync.io",
   ethNetwork: "mainnet",
   zksync: true
-}
+};
 
 if (process.env.ETHERSCAN_API_KEY != undefined) {
   module.exports.etherscan = {
