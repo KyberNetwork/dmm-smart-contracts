@@ -7,6 +7,9 @@ require('@nomiclabs/hardhat-etherscan');
 require('hardhat-contract-sizer');
 require('solidity-coverage');
 require('hardhat-deploy');
+require('@matterlabs/hardhat-zksync-deploy');
+require('@matterlabs/hardhat-zksync-solc');
+require('@matterlabs/hardhat-zksync-verify');
 require('dotenv').config();
 
 task('accounts', 'Prints the list of accounts', async () => {
@@ -191,6 +194,12 @@ module.exports = {
     deploy: './deploy',
     deployments: './deployments',
     imports: './imports',
+  },
+  zksolc: {
+    version: '1.3.10',
+    compilerSource: 'binary',
+    settings: {
+    },
   },
 };
 
