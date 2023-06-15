@@ -51,3 +51,11 @@ Example: `npx hardhat deploy --tags KyberSwap --network rinkeby --gasprice 30000
 `--watch`: This flag make the task never ending, watching for file changes in the deploy scripts folder and the contract source folder. If any changes happen the contracts are recompiled and the deploy script are re-run. Combined with a proxy deployment (Proxies or Diamond) this allow to have HCR (Hot Contract Replacement).
 
 ---
+
+### How to deploy on zkSync
+- Update `ZK_FLAGS` env to
+  `0` default, not using zkSync network
+  `1` if using mainnet
+  `2` if using testnet
+- `yarn hardhat compile --network zkSyncNetwork`
+- `yarn hardhat deployZkSync --network zkSyncNetwork`

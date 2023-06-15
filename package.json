@@ -68,6 +68,7 @@
     "@matterlabs/hardhat-zksync-solc": "^0.3.17",
     "@matterlabs/hardhat-zksync-verify": "^0.1.7",
     "@openzeppelin/contracts": "3.4.1",
-    "hardhat-deploy": "^0.11.10"
+    "hardhat-deploy": "^0.11.10",
+    "zksync-web3": "^0.14.3"
   }
 }

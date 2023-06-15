@@ -11,6 +11,7 @@ require('@matterlabs/hardhat-zksync-deploy');
 require('@matterlabs/hardhat-zksync-solc');
 require('@matterlabs/hardhat-zksync-verify');
 require('dotenv').config();
+require('./deploy/deploy_zkSync');
 
 task('accounts', 'Prints the list of accounts', async () => {
   const accounts = await web3.eth.getAccounts();
@@ -35,6 +36,20 @@ task('deploymentVerify', 'verify contracts from deployments')
     }
   });
 
+const zkSyncNetwork = process.env.ZK_FLAGS == '1' ? {
+  url: "https://mainnet.era.zksync.io",
+  ethNetwork: "https://mainnet.era.zksync.io",
+  zksync: true,
+  verifyURL: 'https://zksync2-mainnet-explorer.zksync.io/contract_verification'
+} : {
+  url: "https://testnet.era.zksync.dev",
+  ethNetwork: "https://rpc.ankr.com/eth_goerli",
+  zksync: true,
+  verifyURL: 'https://zksync2-testnet-explorer.zksync.dev/contract_verification'
+}
+
+const sourcePath = process.env.ZK_FLAGS != '0' ?  './contracts-zk' : './contracts'
+
 module.exports = {
   solidity: {
     compilers: [
@@ -43,7 +58,8 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 999999,
+            // runs: 999999,
+            runs: 200,
           },
         },
       },
@@ -184,12 +200,13 @@ module.exports = {
         },
       ],
     },
+    zkSyncNetwork
   },
   mocha: {
     enableTimeouts: false,
   },
   paths: {
-    sources: './contracts',
+    sources: sourcePath,
     tests: './test',
     deploy: './deploy',
     deployments: './deployments',
@@ -207,25 +224,6 @@ const INFURA_API_KEY = process.env.INFURA_API_KEY;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 if (INFURA_API_KEY != undefined && PRIVATE_KEY != undefined) {
-  module.exports.networks.kovan = {
-    url: `https://kovan.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-  };
-
-  module.exports.networks.rinkeby = {
-    url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-    blockGasLimit: 30000000,
-  };
-
-  module.exports.networks.ropsten = {
-    url: `https://ropsten.infura.io/v3/${INFURA_API_KEY}`,
-    accounts: [PRIVATE_KEY],
-    timeout: 20000,
-  };
-
   module.exports.networks.mainnet = {
     url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
     accounts: [PRIVATE_KEY],
