@@ -3,6 +3,7 @@ pragma solidity 0.6.12;
 
 import "../libraries/DMMLibrary.sol";
 
+
 contract MockDMMLibrary {
     function getAmountOut(
         uint256 amountIn,
